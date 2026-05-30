@@ -1,0 +1,23 @@
+# App-of-Apps — apply once after Argo CD install (see scripts/argocd-bootstrap.sh)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fin-enterprise-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: fin-enterprise
+  source:
+    repoURL: REPO_URL_PLACEHOLDER
+    targetRevision: main
+    path: argocd/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

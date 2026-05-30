@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fin-enterprise
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Financial Enterprise Application workloads
+  sourceRepos:
+    - "*"
+  destinations:
+    - namespace: fin-enterprise-local
+      server: https://kubernetes.default.svc
+    - namespace: fin-enterprise-staging
+      server: https://kubernetes.default.svc
+    - namespace: fin-enterprise-prod
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

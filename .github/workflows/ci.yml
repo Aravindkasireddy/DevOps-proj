@@ -1,0 +1,33 @@
+# Continuous Integration — lint, SAST, unit tests, coverage gate (calls reusable workflows)
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  python-ci:
+    name: Python quality & tests
+    uses: ./.github/workflows/reusable-python-ci.yml
+    secrets: inherit
+    with:
+      python-version: "3.12"
+      upload-codecov: true
+
+  build-image:
+    name: Docker build (no push)
+    needs: [python-ci]
+    uses: ./.github/workflows/reusable-docker-pr-build.yml
+    secrets: inherit
+    with:
+      image-tag: pr-${{ github.event.pull_request.number || github.sha }}

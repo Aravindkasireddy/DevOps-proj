@@ -1,0 +1,47 @@
+name: Kind Integration
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "app/**"
+      - "docker/**"
+      - "k8s/**"
+      - "kind/**"
+      - ".github/workflows/kind-integration.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  kind-deploy:
+    name: Build · Load · Deploy on Kind
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: fin-enterprise-ci
+          config: kind/kind-config.yaml
+
+      - name: Build and load image
+        run: |
+          docker build -t financial-enterprise/asset-api:local -f docker/Dockerfile .
+          kind load docker-image financial-enterprise/asset-api:local --name fin-enterprise-ci
+
+      - name: Deploy local overlay
+        run: |
+          kubectl apply -k k8s/overlays/local
+          kubectl rollout status deployment/postgres -n fin-enterprise-local --timeout=120s
+          kubectl rollout status deployment/fin-enterprise-api -n fin-enterprise-local --timeout=180s
+
+      - name: Smoke test API
+        run: |
+          kubectl port-forward -n fin-enterprise-local svc/fin-enterprise-api 18080:80 &
+          sleep 3
+          curl -sf http://127.0.0.1:18080/health
+          curl -sf http://127.0.0.1:18080/ready

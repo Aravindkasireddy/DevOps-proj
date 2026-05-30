@@ -1,0 +1,62 @@
+---
+# VM deployment path (alternative to Kubernetes) — immutable container on EC2/GCE
+- name: Deploy Financial Enterprise API to VMs
+  hosts: fin_enterprise_api
+  become: true
+  vars:
+    app_name: fin-enterprise-api
+    compose_dir: /opt/fin-enterprise
+
+  tasks:
+    - name: Install Docker
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Ensure Docker service running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ compose_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Deploy compose file
+      ansible.builtin.template:
+        src: ../templates/docker-compose.vm.yml.j2
+        dest: "{{ compose_dir }}/docker-compose.yml"
+        mode: "0644"
+      notify: Restart fin-enterprise stack
+
+    - name: Pull application image
+      community.docker.docker_image:
+        name: "{{ app_image }}"
+        source: pull
+
+    - name: Start stack with compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_dir }}"
+        state: present
+
+    - name: Wait for health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ app_port }}/health"
+        status_code: 200
+      register: health
+      retries: 12
+      delay: 5
+      until: health.status == 200
+
+  handlers:
+    - name: Restart fin-enterprise stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_dir }}"
+        state: restarted

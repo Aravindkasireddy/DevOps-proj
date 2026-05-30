@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fin-enterprise-api
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: api
+          image: financial-enterprise/asset-api:local
+          imagePullPolicy: Never
+          env:
+            - name: APP_ENV
+              value: local

@@ -1,0 +1,30 @@
+groups:
+  - name: fin-enterprise-api
+    rules:
+      - alert: FinEnterpriseApiDown
+        expr: up{job="fin-enterprise-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Financial Enterprise API is unreachable"
+          description: "Prometheus cannot scrape /metrics for 2+ minutes."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated 5xx error rate on Financial Enterprise API"
+
+      - alert: HighLatencyP99
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P99 latency above 2s"

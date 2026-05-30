@@ -1,0 +1,25 @@
+# Enable when EKS staging cluster is registered in Argo CD (or use ApplicationSet)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fin-enterprise-api-staging
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
+spec:
+  project: fin-enterprise
+  source:
+    repoURL: REPO_URL_PLACEHOLDER
+    targetRevision: main
+    path: k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fin-enterprise-staging
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+  # Uncomment for auto-sync after staging cluster validation:
+  # syncPolicy:
+  #   automated:
+  #     prune: true
+  #     selfHeal: true

@@ -1,0 +1,68 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      cloud:
+        type: choice
+        options: [aws, gcp]
+        required: true
+      environment:
+        type: choice
+        options: [dev, staging, prod]
+        required: true
+      action:
+        type: choice
+        options: [plan, apply]
+        default: plan
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: terraform/${{ inputs.cloud }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS (aws only)
+        if: inputs.cloud == 'aws'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Configure GCP (gcp only)
+        if: inputs.cloud == 'gcp'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        if: inputs.cloud == 'gcp'
+
+      - run: terraform init
+        env:
+          TF_VAR_environment: ${{ inputs.environment }}
+
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/${{ inputs.cloud }}
+          framework: terraform
+
+      - name: Plan
+        if: inputs.action == 'plan'
+        run: terraform plan -input=false -var="environment=${{ inputs.environment }}"
+
+      - name: Apply
+        if: inputs.action == 'apply'
+        run: terraform apply -input=false -auto-approve -var="environment=${{ inputs.environment }}"

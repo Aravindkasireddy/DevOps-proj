@@ -1,0 +1,9 @@
+quiet: false
+compact: true
+
+framework:
+  - terraform
+
+skip-check:
+  # Demo: EKS public endpoint restricted by CIDR in module; document for prod hardening
+  - CKV_AWS_39  # EKS public API - mitigated via authorized_cidrs variable

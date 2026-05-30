@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: fin-enterprise-local
+
+resources:
+  - ../../base
+  - postgres.yaml
+
+patches:
+  - path: deployment-patch.yaml
+  - path: service-nodeport.yaml
+  - path: secret-patch.yaml
+  - target:
+      kind: Ingress
+      name: fin-enterprise-api
+    patch: |
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: fin-enterprise-api
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: fin-enterprise-api
+    patch: |
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: fin-enterprise-api
+  - target:
+      kind: ServiceMonitor
+      name: fin-enterprise-api
+    patch: |
+      $patch: delete
+      apiVersion: monitoring.coreos.com/v1
+      kind: ServiceMonitor
+      metadata:
+        name: fin-enterprise-api
+
+commonLabels:
+  environment: local

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fin-enterprise-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fin-enterprise-api
+  template:
+    metadata:
+      labels:
+        app: fin-enterprise-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: fin-enterprise-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: api
+          # Default for local/Kind; CI/CD sets ghcr.io/<owner>/financial-enterprise-asset-api:<sha> via kubectl set image
+          image: docker.io/financial-enterprise/asset-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: fin-enterprise-api-config
+            - secretRef:
+                name: fin-enterprise-api-secrets
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      # imagePullSecrets:
+      #   - name: artifactory-creds
