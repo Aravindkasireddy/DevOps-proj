@@ -37,6 +37,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Reusable workflows: `secrets` cannot be used in `if:` — use step outputs instead.
+      - name: Resolve optional registry flags
+        id: flags
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ART_URL: ${{ secrets.ARTIFACTORY_URL }}
+          ART_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ART_PASS: ${{ secrets.ARTIFACTORY_PASSWORD }}
+        run: |
+          if [ -n "${DH_TOKEN}" ] && [ -n "${DH_USER}" ]; then
+            echo "dockerhub=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dockerhub=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "${ART_URL}" ] && [ -n "${ART_USER}" ] && [ -n "${ART_PASS}" ]; then
+            echo "artifactory=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "artifactory=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Compute registry image names
         id: reg
         env:
@@ -106,14 +127,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login Docker Hub (optional mirror)
-        if: ${{ secrets.DOCKERHUB_TOKEN != '' && secrets.DOCKERHUB_USERNAME != '' }}
+        if: steps.flags.outputs.dockerhub == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login Artifactory (optional)
-        if: ${{ secrets.ARTIFACTORY_URL != '' && secrets.ARTIFACTORY_USER != '' }}
+        if: steps.flags.outputs.artifactory == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.ARTIFACTORY_URL }}
