@@ -21,11 +21,26 @@ kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}' 2>
 NODE_PORT=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.name=="https")].nodePort}' 2>/dev/null || echo "")
 PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" 2>/dev/null | base64 -d || echo "n/a")
 
+IS_KIND=false
+if kubectl config current-context 2>/dev/null | grep -qE '^kind-'; then
+  IS_KIND=true
+fi
+
 echo ""
 echo "Argo CD installed."
-echo "  UI (NodePort):  https://localhost:${NODE_PORT:-443}  (accept self-signed cert)"
-echo "  UI (port-fwd):  kubectl port-forward svc/argocd-server -n argocd 8081:443"
-echo "                  https://localhost:8081"
+if [[ "$IS_KIND" == true ]]; then
+  echo ""
+  echo "  *** Kind: use port-forward for the UI (NodePort is usually NOT reachable on localhost"
+  echo "      because only selected ports are mapped in kind/kind-config.yaml). ***"
+  echo ""
+fi
+echo "  UI (recommended on Kind):"
+echo "    kubectl port-forward svc/argocd-server -n argocd 8081:443"
+echo "    https://localhost:8081  (accept self-signed cert)"
+echo ""
+echo "  UI (NodePort — works on cloud / some single-node setups):"
+echo "    https://localhost:${NODE_PORT:-<nodePort>}  (from: kubectl get svc argocd-server -n argocd)"
+echo ""
 echo "  Username:       admin"
 echo "  Password:       ${PASS}"
 echo ""

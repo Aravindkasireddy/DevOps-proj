@@ -26,8 +26,8 @@ Run the full **Kubernetes + GitOps** path on your laptop before touching AWS EKS
 ## Option A — Full GitOps (recommended for interviews)
 
 ```bash
-# 1. Push this repo to GitHub first
-export ARGOCD_REPO_URL=https://github.com/<you>/financial-enterprise-devops-platform.git
+# 1. Push this repo to GitHub first (same URL as your origin)
+export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
 
 # 2. Create cluster + load image
 make kind-up
@@ -47,6 +47,8 @@ Argo CD UI:
 kubectl port-forward svc/argocd-server -n argocd 8081:443
 # https://localhost:8081  user: admin
 ```
+
+**Why not `https://localhost:<NodePort>` on Kind?** This cluster’s `kind/kind-config.yaml` only maps a few **host** ports (e.g. `30080` for the API) into the Kind node. Argo’s **HTTPS NodePort** (often `30xxx`) is **not** mapped, so your browser cannot reach it on `localhost`. **Port-forward always works.** On a real cloud LB or a VM with a routable node IP, NodePort (or Ingress) is fine.
 
 ## Option B — kubectl only (before git push)
 
@@ -80,7 +82,7 @@ curl http://localhost:30080/docs
 
 1. **Why Kind?** — Same Kubernetes API as EKS/GKE; fast feedback; CI can run `kind create cluster` in GitHub Actions.
 2. **GitOps vs CI push** — Argo CD reconciles cluster to git; drift detection, rollback = revert commit.
-3. **App-of-Apps** — `argocd/bootstrap/root-app.yaml` manages `argocd/applications/*.yaml`.
+3. **App-of-Apps** — `argocd/bootstrap/root-app.yaml` is a reference pattern; bootstrap applies **leaf** `argocd/applications/*.yaml` with your repo URL substituted so Argo never syncs unresolved `REPO_URL_PLACEHOLDER` from git.
 4. **ignoreDifferences** — Local image loaded via `kind load` isn’t in git; prevents sync loops.
 5. **Promotion** — `fin-enterprise-api-local` → `fin-enterprise-api-staging` → prod overlays; same pattern as Artifactory image promotion.
 
@@ -88,6 +90,7 @@ curl http://localhost:30080/docs
 
 | Issue | Fix |
 |-------|-----|
+| Argo UI / `https://localhost:30xxx` hangs | On Kind, use **port-forward** (see above); NodePort is not published to the host unless you add it to `kind/kind-config.yaml` `extraPortMappings`. |
 | `ImagePullBackOff` | `kind load docker-image financial-enterprise/asset-api:local --name fin-enterprise` |
 | Argo `ComparisonError` / repo | Set `ARGOCD_REPO_URL`; ensure repo is public or add credentials in Argo CD |
 | `/ready` database down | Wait for postgres pod: `kubectl logs -n fin-enterprise-local deploy/postgres` |

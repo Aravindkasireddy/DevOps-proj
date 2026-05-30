@@ -1,4 +1,7 @@
-# App-of-Apps — apply once after Argo CD install (see scripts/argocd-bootstrap.sh)
+# App-of-Apps — not applied by scripts/argocd-bootstrap.sh by default: child manifests in this
+# directory still use REPO_URL_PLACEHOLDER in git; Argo would sync invalid repo URLs. Bootstrap
+# substitutes the URL only for kubectl apply. Re-enable root after templating (Helm/Kustomize)
+# or committing resolved repo URLs.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

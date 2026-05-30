@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Register Git repo + apply AppProject and App-of-Apps to Argo CD
+# Register Git repo + apply AppProject + Argo CD Applications (leaf apps; see root-app.yaml note)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLUSTER_NAME="${KIND_CLUSTER_NAME:-fin-enterprise}"
@@ -30,7 +30,10 @@ kubectl apply -f "$ROOT/argocd/projects/fin-enterprise-project.yaml"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-for f in "$ROOT/argocd/applications/"*.yaml "$ROOT/argocd/bootstrap/root-app.yaml"; do
+# Leaf Applications only (repo URL substituted here). We skip root-app.yaml:
+# syncing argocd/applications from git would re-apply YAML that still contains
+# REPO_URL_PLACEHOLDER in the repo. Use app-of-apps after templating or Helm if needed.
+for f in "$ROOT/argocd/applications/"*.yaml; do
   [[ -f "$f" ]] || continue
   sed "s|REPO_URL_PLACEHOLDER|${REPO_URL}|g" "$f" > "$TMP/$(basename "$f")"
 done

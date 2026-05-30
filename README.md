@@ -55,7 +55,7 @@ open http://localhost:3000         # Grafana
 **Kind + Argo CD** (Kubernetes + GitOps — interview gold):
 
 ```bash
-export ARGOCD_REPO_URL=https://github.com/<you>/financial-enterprise-devops-platform.git
+export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
 make kind-up          # cluster + load image
 make argocd-up        # Argo CD + sync from git
 # OR before git push:  make kind-apply
