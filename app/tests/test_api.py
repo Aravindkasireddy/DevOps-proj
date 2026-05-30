@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from httpx import AsyncClient
 
@@ -13,7 +15,11 @@ async def test_health(client: AsyncClient) -> None:
 async def test_create_portfolio_and_holding(client: AsyncClient) -> None:
     portfolio_resp = await client.post(
         "/api/v1/portfolios",
-        json={"name": "Financial Enterprise Core Bond", "strategy": "core_fixed_income", "base_currency": "USD"},
+        json={
+            "name": "Financial Enterprise Core Bond",
+            "strategy": "core_fixed_income",
+            "base_currency": "USD",
+        },
     )
     assert portfolio_resp.status_code == 201
     portfolio_id = portfolio_resp.json()["id"]
@@ -56,4 +62,4 @@ async def test_record_nav(client: AsyncClient) -> None:
         json={"as_of_date": "2026-05-27", "nav": "15000000.00", "notes": "EOD"},
     )
     assert nav.status_code == 201
-    assert nav.json()["nav"] == "15000000.00"
+    assert Decimal(nav.json()["nav"]) == Decimal("15000000.00")

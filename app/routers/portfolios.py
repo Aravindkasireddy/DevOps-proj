@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,9 +18,11 @@ from app.schemas import (
 
 router = APIRouter(prefix="/api/v1/portfolios", tags=["portfolios"])
 
+DbSession = Annotated[AsyncSession, Depends(get_db)]
+
 
 @router.post("", response_model=PortfolioRead, status_code=status.HTTP_201_CREATED)
-async def create_portfolio(payload: PortfolioCreate, db: AsyncSession = Depends(get_db)) -> Portfolio:
+async def create_portfolio(payload: PortfolioCreate, db: DbSession) -> Portfolio:
     existing = await db.scalar(select(Portfolio).where(Portfolio.name == payload.name))
     if existing:
         raise HTTPException(status_code=409, detail="Portfolio name already exists")
@@ -30,22 +34,28 @@ async def create_portfolio(payload: PortfolioCreate, db: AsyncSession = Depends(
 
 
 @router.get("", response_model=list[PortfolioRead])
-async def list_portfolios(db: AsyncSession = Depends(get_db)) -> list[Portfolio]:
+async def list_portfolios(db: DbSession) -> list[Portfolio]:
     result = await db.scalars(select(Portfolio).order_by(Portfolio.id))
     return list(result.all())
 
 
 @router.get("/{portfolio_id}", response_model=PortfolioRead)
-async def get_portfolio(portfolio_id: int, db: AsyncSession = Depends(get_db)) -> Portfolio:
+async def get_portfolio(portfolio_id: int, db: DbSession) -> Portfolio:
     portfolio = await db.get(Portfolio, portfolio_id)
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     return portfolio
 
 
-@router.post("/{portfolio_id}/holdings", response_model=HoldingRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{portfolio_id}/holdings",
+    response_model=HoldingRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def add_holding(
-    portfolio_id: int, payload: HoldingCreate, db: AsyncSession = Depends(get_db)
+    portfolio_id: int,
+    payload: HoldingCreate,
+    db: DbSession,
 ) -> Holding:
     portfolio = await db.get(Portfolio, portfolio_id)
     if not portfolio:
@@ -58,7 +68,7 @@ async def add_holding(
 
 
 @router.get("/{portfolio_id}/holdings", response_model=list[HoldingRead])
-async def list_holdings(portfolio_id: int, db: AsyncSession = Depends(get_db)) -> list[Holding]:
+async def list_holdings(portfolio_id: int, db: DbSession) -> list[Holding]:
     portfolio = await db.get(Portfolio, portfolio_id)
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found")
@@ -66,9 +76,15 @@ async def list_holdings(portfolio_id: int, db: AsyncSession = Depends(get_db)) -
     return list(result.all())
 
 
-@router.post("/{portfolio_id}/nav", response_model=NavSnapshotRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{portfolio_id}/nav",
+    response_model=NavSnapshotRead,
+    status_code=status.HTTP_201_CREATED,
+)
 async def record_nav(
-    portfolio_id: int, payload: NavSnapshotCreate, db: AsyncSession = Depends(get_db)
+    portfolio_id: int,
+    payload: NavSnapshotCreate,
+    db: DbSession,
 ) -> NavSnapshot:
     portfolio = await db.get(Portfolio, portfolio_id)
     if not portfolio:
@@ -81,7 +97,7 @@ async def record_nav(
 
 
 @router.get("/{portfolio_id}/summary")
-async def portfolio_summary(portfolio_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+async def portfolio_summary(portfolio_id: int, db: DbSession) -> dict[str, str | int | None]:
     stmt = (
         select(Portfolio)
         .where(Portfolio.id == portfolio_id)

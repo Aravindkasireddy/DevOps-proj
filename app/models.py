@@ -18,9 +18,13 @@ class Portfolio(Base):
     base_currency: Mapped[str] = mapped_column(String(3), default="USD")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    holdings: Mapped[list["Holding"]] = relationship(back_populates="portfolio", cascade="all, delete-orphan")
-    nav_snapshots: Mapped[list["NavSnapshot"]] = relationship(
-        back_populates="portfolio", cascade="all, delete-orphan"
+    holdings: Mapped[list[Holding]] = relationship(
+        back_populates="portfolio",
+        cascade="all, delete-orphan",
+    )
+    nav_snapshots: Mapped[list[NavSnapshot]] = relationship(
+        back_populates="portfolio",
+        cascade="all, delete-orphan",
     )
 
 
@@ -28,7 +32,10 @@ class Holding(Base):
     __tablename__ = "holdings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    portfolio_id: Mapped[int] = mapped_column(ForeignKey("portfolios.id", ondelete="CASCADE"), index=True)
+    portfolio_id: Mapped[int] = mapped_column(
+        ForeignKey("portfolios.id", ondelete="CASCADE"),
+        index=True,
+    )
     symbol: Mapped[str] = mapped_column(String(32), index=True)
     cusip: Mapped[str | None] = mapped_column(String(9), nullable=True)
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 6))
@@ -38,17 +45,20 @@ class Holding(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    portfolio: Mapped["Portfolio"] = relationship(back_populates="holdings")
+    portfolio: Mapped[Portfolio] = relationship(back_populates="holdings")
 
 
 class NavSnapshot(Base):
     __tablename__ = "nav_snapshots"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    portfolio_id: Mapped[int] = mapped_column(ForeignKey("portfolios.id", ondelete="CASCADE"), index=True)
+    portfolio_id: Mapped[int] = mapped_column(
+        ForeignKey("portfolios.id", ondelete="CASCADE"),
+        index=True,
+    )
     as_of_date: Mapped[date] = mapped_column(Date, index=True)
     nav: Mapped[Decimal] = mapped_column(Numeric(20, 4))
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    portfolio: Mapped["Portfolio"] = relationship(back_populates="nav_snapshots")
+    portfolio: Mapped[Portfolio] = relationship(back_populates="nav_snapshots")
