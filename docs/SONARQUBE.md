@@ -16,7 +16,7 @@ This repo runs **static analysis + coverage** in GitHub Actions using the offici
      - `SONAR_PROJECT_KEY` = your project key  
 5. Push to **`main`** / **`develop`** or open a **PR** — workflow **SonarQube** runs when all three are set.
 
-The workflow is skipped until `SONAR_TOKEN`, `SONAR_ORGANIZATION`, and `SONAR_PROJECT_KEY` exist (so forks without secrets do not fail).
+The workflow **skips the scan** (with a green notice) until `SONAR_TOKEN`, `SONAR_ORGANIZATION`, and `SONAR_PROJECT_KEY` exist. GitHub does not allow `secrets.*` in **job-level** `if:` expressions, so this repo gates inside a step instead.
 
 ## SonarQube Server (self-hosted)
 

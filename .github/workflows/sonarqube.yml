@@ -1,5 +1,6 @@
 # SonarQube Cloud / Server — static analysis + Python coverage
 # Skips until SONAR_TOKEN + repo Variables SONAR_ORGANIZATION + SONAR_PROJECT_KEY are set.
+# Note: `secrets` cannot be used in job-level `if` (workflow invalid); gate runs in a step instead.
 # Setup: docs/SONARQUBE.md
 name: SonarQube
 
@@ -17,24 +18,44 @@ jobs:
   sonarqube:
     name: Scan
     runs-on: ubuntu-latest
-    if: ${{ secrets.SONAR_TOKEN != '' && vars.SONAR_ORGANIZATION != '' && vars.SONAR_PROJECT_KEY != '' }}
     steps:
+      - name: Evaluate Sonar configuration
+        id: gate
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "${SONAR_TOKEN}" ] && [ -n "${{ vars.SONAR_ORGANIZATION }}" ] \
+            && [ -n "${{ vars.SONAR_PROJECT_KEY }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip Sonar (missing configuration)
+        if: steps.gate.outputs.enabled != 'true'
+        run: 'echo "::notice::Skipping SonarQube — add SONAR_TOKEN and Variables SONAR_ORGANIZATION, SONAR_PROJECT_KEY (see docs/SONARQUBE.md)."'
+
       - uses: actions/checkout@v6
+        if: steps.gate.outputs.enabled == 'true'
         with:
           fetch-depth: 0
 
       - uses: actions/setup-python@v6
+        if: steps.gate.outputs.enabled == 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
+        if: steps.gate.outputs.enabled == 'true'
         run: pip install -e ".[dev]"
 
       - name: Unit tests with coverage
+        if: steps.gate.outputs.enabled == 'true'
         run: pytest app/tests --cov=app --cov-report=xml --cov-report=term
 
       - name: SonarQube Scan
+        if: steps.gate.outputs.enabled == 'true'
         uses: SonarSource/sonarqube-scan-action@v8.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
