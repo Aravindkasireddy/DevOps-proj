@@ -46,7 +46,11 @@ Argo CD UI:
 ```bash
 kubectl port-forward svc/argocd-server -n argocd 8081:443
 # https://localhost:8081  user: admin
+# password (initial install):
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
 ```
+
+After `make argocd-install` / `make argocd-up`, the install script also prints this password to the terminal.
 
 **Why not `https://localhost:<NodePort>` on Kind?** This cluster’s `kind/kind-config.yaml` only maps a few **host** ports (e.g. `30080` for the API) into the Kind node. Argo’s **HTTPS NodePort** (often `30xxx`) is **not** mapped, so your browser cannot reach it on `localhost`. **Port-forward always works.** On a real cloud LB or a VM with a routable node IP, NodePort (or Ingress) is fine.
 
