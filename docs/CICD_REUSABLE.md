@@ -17,7 +17,7 @@ This repo uses **`workflow_call`** so Python checks and Docker build/push live i
 | Caller | Invokes |
 |--------|---------|
 | `ci.yml` | `reusable-python-ci` → `reusable-docker-pr-build` |
-| `ci-cd.yml` | `reusable-python-ci` → `reusable-docker-release` → Terraform + deploy jobs |
+| `ci-cd.yml` | `reusable-python-ci` → `reusable-docker-release` → Terraform validate → **Kind deploy** (`deploy-kind`) → optional EKS (`deploy-staging`, needs var `EKS_STAGING_ENABLED`) |
 
 ## Caller syntax
 

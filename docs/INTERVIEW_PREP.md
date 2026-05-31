@@ -97,7 +97,7 @@ Study each topic, then **open the linked path** and explain it aloud as if in a 
 | Compute | EKS | GKE private nodes |
 | Database | RDS Postgres | Cloud SQL |
 | Networking | VPC module, private subnets | VPC + private subnet |
-| Deploy | `deploy-staging` job | `deploy-prod-gcp-dr` |
+| Deploy | `deploy-kind` (Kind on runner, default) · `deploy-staging` (EKS, needs var `EKS_STAGING_ENABLED`) | `deploy-prod-gcp-dr` |
 
 **Why hybrid?** Regulatory DR, vendor diversification, acquisition integration — not because multi-cloud is always simpler.
 

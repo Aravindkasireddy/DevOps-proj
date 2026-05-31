@@ -1,4 +1,5 @@
-# CD — reusable Python CI + Docker build/scan/push (GHCR) + Terraform plan + deploy
+# CD — Python + Docker (GHCR) + optional Kind “staging” + optional cloud IaC (Terraform) + optional EKS/GKE deploy
+# Kind does not use Terraform. Terraform jobs validate AWS/GCP stacks only when TERRAFORM_CI_ENABLED=true.
 name: CI/CD
 
 on:
@@ -38,15 +39,12 @@ jobs:
       package-name: financial-enterprise-asset-api
       dockerhub-image-path: financial-enterprise/asset-api
 
-  terraform-plan:
-    # init + validate only: `terraform plan` needs live AWS/GCP credentials and fails on public CI.
-    # Run plan locally or use terraform-apply.yml with secrets when you have cloud access.
-    name: Terraform init & validate (AWS + GCP)
+  # Optional: validates terraform/aws + terraform/gcp (not used by Kind). Enable when working on cloud IaC.
+  terraform-cloud-iac:
+    name: Terraform fmt, Checkov, validate (AWS + GCP)
     runs-on: ubuntu-latest
-    needs: build-scan-push
-    strategy:
-      matrix:
-        cloud: [aws, gcp]
+    needs: [build-scan-push]
+    if: vars.TERRAFORM_CI_ENABLED == 'true'
     steps:
       - uses: actions/checkout@v6
 
@@ -57,16 +55,6 @@ jobs:
       - name: Terraform fmt check
         run: terraform fmt -check -recursive terraform/
 
-      - name: Terraform init & validate (${{ matrix.cloud }})
-        working-directory: terraform/${{ matrix.cloud }}
-        env:
-          TF_VAR_environment: staging
-          # Required by terraform/gcp/variables.tf (no default); not used for API calls during validate.
-          TF_VAR_project: fin-enterprise-demo
-        run: |
-          terraform init -backend=false
-          terraform validate
-
       - name: Checkov IaC scan
         uses: bridgecrewio/checkov-action@v12
         with:
@@ -75,14 +63,72 @@ jobs:
           soft_fail: false
           output_format: cli
 
-  deploy-staging:
-    name: Deploy Staging (Kubernetes)
+      - name: Terraform init & validate (aws)
+        working-directory: terraform/aws
+        env:
+          TF_VAR_environment: staging
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Terraform init & validate (gcp)
+        working-directory: terraform/gcp
+        env:
+          TF_VAR_environment: staging
+          TF_VAR_project: fin-enterprise-demo
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  # Kind on the runner: same image SHA as GHCR, same k8s overlay as laptop `make kind-apply`.
+  deploy-kind:
+    name: Deploy to Kind (CI)
     runs-on: ubuntu-latest
-    needs: [build-scan-push, terraform-plan]
+    needs: [build-scan-push]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: fin-enterprise
+          config: kind/kind-config.yaml
+
+      - name: Pull GHCR image and load into Kind (matches local overlay tag)
+        run: |
+          set -euo pipefail
+          OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          SRC="ghcr.io/${OWNER}/financial-enterprise-asset-api:${{ github.sha }}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker pull "$SRC"
+          docker tag "$SRC" "financial-enterprise/asset-api:local"
+          kind load docker-image "financial-enterprise/asset-api:local" --name fin-enterprise
+
+      - name: Apply local overlay & wait for rollouts
+        run: |
+          kubectl config use-context "kind-fin-enterprise"
+          kubectl apply -k k8s/overlays/local
+          kubectl rollout status deployment/postgres -n fin-enterprise-local --timeout=180s
+          kubectl rollout status deployment/fin-enterprise-api -n fin-enterprise-local --timeout=300s
+
+      - name: Smoke test (NodePort on runner → Kind)
+        run: |
+          curl -sfS --retry 10 --retry-delay 5 --retry-all-errors "http://127.0.0.1:30080/health"
+
+  deploy-staging:
+    name: Deploy Staging (Kubernetes — EKS)
+    runs-on: ubuntu-latest
+    # Cloud app deploy only — independent of Kind and of Terraform CI (provision clusters with Terraform locally / terraform-apply.yml).
+    needs: [build-scan-push]
     environment:
       name: staging
       url: https://staging-api.fin-enterprise.example.com
-    if: github.ref == 'refs/heads/main'
+    # Opt-in: requires AWS OIDC + EKS. Kind “staging” is `deploy-kind` (no Terraform, no AWS).
+    if: github.ref == 'refs/heads/main' && vars.EKS_STAGING_ENABLED == 'true'
     steps:
       - uses: actions/checkout@v6
 

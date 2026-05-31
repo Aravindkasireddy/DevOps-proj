@@ -16,7 +16,18 @@ This repo runs **static analysis + coverage** in GitHub Actions using the offici
      - `SONAR_PROJECT_KEY` = your project key  
 5. Push to **`main`** / **`develop`** or open a **PR** — workflow **SonarQube** runs when all three are set.
 
+6. **Use only one analysis mode on SonarCloud.** This repo uses **GitHub Actions** (`sonarqube-scan-action`). In SonarCloud, open the project → **Administration** → **Analysis Method** (or **General Settings** → analysis / automatic analysis, depending on UI) and **turn off Automatic Analysis** so Sonar does not also scan the repo on every push from Sonar’s side. If both are on, the scanner fails with:  
+   `You are running CI analysis while Automatic Analysis is enabled. Please consider disabling one or the other.`
+
 The workflow **skips the scan** (with a green notice) until `SONAR_TOKEN`, `SONAR_ORGANIZATION`, and `SONAR_PROJECT_KEY` exist. GitHub does not allow `secrets.*` in **job-level** `if:` expressions, so this repo gates inside a step instead.
+
+## Troubleshooting
+
+| Log / symptom | What to do |
+|----------------|------------|
+| `CI analysis while Automatic Analysis is enabled` | In SonarCloud: **disable Automatic Analysis** for this project (keep CI / GitHub Actions only). See step 6 above. |
+| Quality Gate failed (exit code 3 after analysis completes) | Fix issues in SonarCloud, or temporarily set `sonar.qualitygate.wait=false` in `sonar-project.properties` (CI stays green; gate still visible in SonarCloud). |
+| Invalid workflow / job never runs | Ensure job-level `if:` does not reference `secrets` (this repo uses a gate **step** instead). |
 
 ## SonarQube Server (self-hosted)
 

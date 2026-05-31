@@ -136,7 +136,8 @@ flowchart TB
 |-----|---------|----------------|
 | `build-scan-push` | Docker build, **Trivy**, push **GHCR** (+ optional Hub / Artifactory) | Supply chain |
 | `terraform-plan` | `terraform validate/plan` + **Checkov** | Shift-left security |
-| `deploy-staging` | `kubectl apply -k k8s/overlays/staging` | GitOps alternative: Argo CD |
+| `deploy-kind` | Kind cluster on runner; pull GHCR image → `kind load` → `k8s/overlays/local` | Same as laptop `make kind-apply`, but image is the **SHA tag from CI** |
+| `deploy-staging` | `kubectl apply -k k8s/overlays/staging` (EKS) | **Opt-in:** set repo variable `EKS_STAGING_ENABLED=true` + `AWS_ROLE_ARN`; GitOps alternative: Argo CD |
 | `deploy-prod-gcp-dr` | Manual workflow to GKE | Hybrid DR |
 
 **Say:**

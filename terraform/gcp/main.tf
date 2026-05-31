@@ -27,10 +27,10 @@ resource "google_compute_network" "vpc" {
 }
 
 resource "google_compute_subnetwork" "private" {
-  name          = "${local.name_prefix}-private"
-  ip_cidr_range = "10.20.0.0/20"
-  region        = var.region
-  network       = google_compute_network.vpc.id
+  name                     = "${local.name_prefix}-private"
+  ip_cidr_range            = "10.20.0.0/20"
+  region                   = var.region
+  network                  = google_compute_network.vpc.id
   private_ip_google_access = true
 }
 

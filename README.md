@@ -54,6 +54,8 @@ open http://localhost:3000         # Grafana
 
 **Kind + Argo CD** (Kubernetes + GitOps — interview gold):
 
+On **`main`**, [CI/CD](.github/workflows/ci-cd.yml) also runs **Deploy to Kind (CI)** on GitHub-hosted runners (same `k8s/overlays/local` as below). EKS staging is opt-in via repo variable `EKS_STAGING_ENABLED` — see [docs/END_TO_END_GITHUB.md](docs/END_TO_END_GITHUB.md).
+
 ```bash
 export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
 make kind-up          # cluster + load image

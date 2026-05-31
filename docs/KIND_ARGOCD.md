@@ -96,6 +96,17 @@ curl http://localhost:30080/docs
 | `/ready` database down | Wait for postgres pod: `kubectl logs -n fin-enterprise-local deploy/postgres` |
 | OutOfSync on image | Expected — `ignoreDifferences` on Deployment image; or commit image tag for real envs |
 
+## CI/CD on GitHub (`ci-cd.yml`)
+
+On every push to **`main`**, after the image is pushed to **GHCR**, the **`Deploy to Kind (CI)`** job:
+
+1. Creates a **Kind** cluster using `kind/kind-config.yaml` (same topology as local).
+2. **`docker pull`** `ghcr.io/<lowercase-owner>/financial-enterprise-asset-api:<commit-sha>`, tags it as **`financial-enterprise/asset-api:local`**, and **`kind load`** so it matches `k8s/overlays/local`.
+3. Runs **`kubectl apply -k k8s/overlays/local`** and waits for Postgres + API rollouts.
+4. Hits **`http://127.0.0.1:30080/health`** on the runner (port map from `kind-config.yaml`).
+
+**EKS staging** in the same workflow is **off by default**. Turn it on with repo **Variable** `EKS_STAGING_ENABLED` = `true` and real AWS/EKS wiring — see [END_TO_END_GITHUB.md](END_TO_END_GITHUB.md).
+
 ## Clean up
 
 ```bash

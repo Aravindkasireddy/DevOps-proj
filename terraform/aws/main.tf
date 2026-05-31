@@ -70,29 +70,29 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier                 = "${local.name_prefix}-assets-db"
-  engine                     = "postgres"
-  engine_version             = "16"
-  instance_class             = var.db_instance_class
-  allocated_storage          = 50
-  max_allocated_storage      = 200
-  storage_encrypted          = true
-  db_name                    = "fin_enterprise_assets"
-  username                   = "fin_enterprise_admin"
+  identifier                  = "${local.name_prefix}-assets-db"
+  engine                      = "postgres"
+  engine_version              = "16"
+  instance_class              = var.db_instance_class
+  allocated_storage           = 50
+  max_allocated_storage       = 200
+  storage_encrypted           = true
+  db_name                     = "fin_enterprise_assets"
+  username                    = "fin_enterprise_admin"
   manage_master_user_password = true
-  vpc_security_group_ids     = [aws_security_group.rds.id]
-  db_subnet_group_name       = aws_db_subnet_group.main.name
-  backup_retention_period    = var.environment == "prod" ? 30 : 7
-  deletion_protection        = var.environment == "prod"
-  skip_final_snapshot        = var.environment != "prod"
-  multi_az                   = var.environment == "prod"
-  publicly_accessible        = false
+  vpc_security_group_ids      = [aws_security_group.rds.id]
+  db_subnet_group_name        = aws_db_subnet_group.main.name
+  backup_retention_period     = var.environment == "prod" ? 30 : 7
+  deletion_protection         = var.environment == "prod"
+  skip_final_snapshot         = var.environment != "prod"
+  multi_az                    = var.environment == "prod"
+  publicly_accessible         = false
 
   tags = { Name = "${local.name_prefix}-rds" }
 }
 
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
 
   cluster_name    = "${local.name_prefix}-eks"
@@ -109,9 +109,9 @@ module "eks" {
 
   eks_managed_node_groups = {
     default = {
-      min_size     = var.environment == "prod" ? 2 : 1
-      max_size     = var.environment == "prod" ? 6 : 3
-      desired_size = var.environment == "prod" ? 3 : 2
+      min_size       = var.environment == "prod" ? 2 : 1
+      max_size       = var.environment == "prod" ? 6 : 3
+      desired_size   = var.environment == "prod" ? 3 : 2
       instance_types = ["t3.large"]
     }
   }
