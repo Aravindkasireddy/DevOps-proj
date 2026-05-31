@@ -75,4 +75,7 @@ class HealthResponse(BaseModel):
     app: str
     environment: str
     database: str
-    version: str = Field(default="unknown", description="Package version from distribution metadata")
+    version: str = Field(
+        default="unknown",
+        description="Package version from distribution metadata",
+    )
