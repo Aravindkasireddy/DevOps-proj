@@ -8,7 +8,7 @@ This project is wired so **GitHub is the control plane** for source, CI/CD, cont
 |------|----------------|
 | **Source** | GitHub repository |
 | **CI** | `ci.yml` — reusable Python + Docker build (no push) |
-| **CD** | `ci-cd.yml` on `main` — Python → build/Trivy → **push to GHCR** → Terraform validate → **Kind deploy** (`deploy-kind`, same overlay as `make kind-apply`) → optional **EKS staging** if `EKS_STAGING_ENABLED` is set |
+| **CD** | `ci-cd.yml` on `main` — Python → build/Trivy → **push to GHCR** → **Kind deploy** (`deploy-kind`, same overlay as `make kind-apply`) → optional **Terraform** (`terraform-cloud-iac` if `TERRAFORM_CI_ENABLED=true`) → optional **EKS** if `EKS_STAGING_ENABLED` |
 | **Registry** | **GitHub Container Registry** (`ghcr.io/<lowercase-owner>/financial-enterprise-asset-api`) using `GITHUB_TOKEN` |
 | **Supply chain** | Trivy SARIF → GitHub Security / Code scanning |
 | **Optional mirrors** | Docker Hub and JFrog Artifactory when repo secrets are set |
@@ -23,9 +23,11 @@ This project is wired so **GitHub is the control plane** for source, CI/CD, cont
 
 **Optional mirrors:** set `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` and/or Artifactory secrets as documented in [CICD_REUSABLE.md](CICD_REUSABLE.md).
 
-**Kind on GitHub Actions (default path):** no extra secrets — the workflow pulls `ghcr.io/<owner>/financial-enterprise-asset-api:<sha>`, retags as `financial-enterprise/asset-api:local`, loads into Kind, applies `k8s/overlays/local`, and curls `http://127.0.0.1:30080/health`.
+**Kind “staging” on CI:** **`deploy-kind`** runs on every `main` push after the image is on GHCR. It does **not** use Terraform (no VPC/EKS resources — only `kubectl` + `k8s/overlays/local`).
 
-**EKS staging (opt-in):** add repository **Variable** `EKS_STAGING_ENABLED` = `true` and configure **`AWS_ROLE_ARN`** (OIDC) plus an EKS cluster matching the workflow. Without the variable, `deploy-staging` is skipped so `main` stays green without AWS.
+**Terraform on CI (optional):** set repository **Variable** **`TERRAFORM_CI_ENABLED`** = **`true`** to run **`terraform-cloud-iac`** (fmt, Checkov, `terraform validate` for `terraform/aws` and `terraform/gcp`). Use this when you are iterating on **AWS/GCP** infrastructure before apply. **Kind does not need it.**
+
+**EKS staging (opt-in):** add **`EKS_STAGING_ENABLED`** = **`true`** and configure **`AWS_ROLE_ARN`** (OIDC) plus an EKS cluster matching the workflow. Without the variable, `deploy-staging` is skipped so `main` stays green without AWS.
 
 **Cloud deploy (GKE prod path):** `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (and cluster names/regions matching your Terraform). `deploy-prod-gcp-dr` still **needs** a successful `deploy-staging`, so enable EKS staging or adjust that job’s `needs` if you run prod without EKS.
 

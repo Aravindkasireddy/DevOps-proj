@@ -107,6 +107,8 @@ On every push to **`main`**, after the image is pushed to **GHCR**, the **`Deplo
 
 **EKS staging** in the same workflow is **off by default**. Turn it on with repo **Variable** `EKS_STAGING_ENABLED` = `true` and real AWS/EKS wiring — see [END_TO_END_GITHUB.md](END_TO_END_GITHUB.md).
 
+**Terraform in CI** is **off by default** (`TERRAFORM_CI_ENABLED` unset). Kind deploy does **not** use it; set **`TERRAFORM_CI_ENABLED=true`** when you want fmt / Checkov / validate for **AWS/GCP** in Actions.
+
 ## Clean up
 
 ```bash

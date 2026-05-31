@@ -67,7 +67,7 @@ Study each topic, then **open the linked path** and explain it aloud as if in a 
 | Modules? | `terraform/modules/aws-vpc`, EKS module |
 | Workspaces / envs? | `var.environment` — dev/staging/prod |
 | Hybrid cloud? | `terraform/aws` (primary), `terraform/gcp` (DR) |
-| `terraform plan` in CI? | `ci-cd.yml`, `terraform-apply.yml` |
+| `terraform plan` in CI? | **`terraform-cloud-iac`** in `ci-cd.yml` when **`TERRAFORM_CI_ENABLED=true`**; else run locally / `terraform-apply.yml` |
 | Drift detection? | Scheduled plan workflow (extend) |
 
 **Deep dive**: Why `manage_master_user_password` on RDS? Secrets Manager integration, no password in TF state plaintext.
