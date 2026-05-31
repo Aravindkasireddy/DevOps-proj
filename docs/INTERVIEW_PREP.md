@@ -51,8 +51,7 @@ Study each topic, then **open the linked path** and explain it aloud as if in a 
 |----------|-------|
 | Multi-stage Dockerfile? | `docker/Dockerfile` — builder + non-root runtime |
 | Local compose? | `docker-compose.yml` |
-| GHCR / registries? | `ci-cd.yml` → `reusable-docker-release.yml` pushes `ghcr.io/<owner>/financial-enterprise-asset-api`; optional Docker Hub / Artifactory |
-| Artifactory? | `docker/artifactory.md`, dual registry in metadata-action |
+| GHCR / registries? | `ci-cd.yml` → `reusable-docker-release.yml` pushes `ghcr.io/<owner>/financial-enterprise-asset-api`; optional Docker Hub mirror |
 | Image scanning? | Trivy action, fail on Critical |
 
 **Interview**: Explain **image promotion** dev → staging → prod, not retagging `latest` in prod blindly.
@@ -182,7 +181,7 @@ Full guide: `docs/KIND_ARGOCD.md`
 
 4. **Terraform state lock stuck**: DynamoDB lock item, `force-unlock` after verifying no active apply.
 
-5. **Pod CrashLoopBackOff**: `kubectl logs --previous`, check `/ready` DB URL, image pull secrets for Artifactory.
+5. **Pod CrashLoopBackOff**: `kubectl logs --previous`, check `/ready` DB URL, image pull secrets if using a private registry (e.g. GHCR).
 
 6. **High latency**: Grafana P95 panel → slow queries → RDS Performance Insights → index on `holdings.portfolio_id`.
 
@@ -196,7 +195,7 @@ Full guide: `docs/KIND_ARGOCD.md`
 
 ## 12. 30-second elevator pitch
 
-> "I built an institutional asset management API for the Financial Enterprise Application with full CI/CD on GitHub Actions — lint, Bandit, tests, Trivy, and Checkov gates. Images publish to **GHCR** by default, with optional Docker Hub and Artifactory mirrors for enterprise promotion. Terraform provisions hybrid AWS EKS+RDS and GCP GKE+Cloud SQL for DR. Locally I use Kind and Argo CD GitOps; in cloud we deploy Kustomize overlays to EKS/GKE or Ansible to VMs, with Prometheus/Grafana observability and PostgreSQL migrations via Alembic."
+> "I built an institutional asset management API for the Financial Enterprise Application with full CI/CD on GitHub Actions — lint, Bandit, tests, Trivy, and Checkov gates. Images publish to **GHCR** by default, with an optional Docker Hub mirror. Terraform provisions hybrid AWS EKS+RDS and GCP GKE+Cloud SQL for DR. Locally I use Kind and Argo CD GitOps; in cloud we deploy Kustomize overlays to EKS/GKE or Ansible to VMs, with Prometheus/Grafana observability and PostgreSQL migrations via Alembic."
 
 ---
 

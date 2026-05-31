@@ -112,7 +112,7 @@ terraform destroy -var="environment=staging"
 ## GitHub / CI prep
 
 - [ ] Repo pushed to GitHub  
-- [ ] Secrets documented (not shown on screen): `DOCKERHUB_*`, `AWS_ROLE_ARN`, optional Artifactory  
+- [ ] Secrets documented (not shown on screen): `DOCKERHUB_*`, `AWS_ROLE_ARN`  
 - [ ] One successful `CI/CD` workflow run on `main` to show in UI  
 - [ ] Security tab: Trivy SARIF upload (if enabled)
 

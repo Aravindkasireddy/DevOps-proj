@@ -84,7 +84,7 @@ curl http://localhost:30080/docs
 2. **GitOps vs CI push** — Argo CD reconciles cluster to git; drift detection, rollback = revert commit.
 3. **App-of-Apps** — `argocd/bootstrap/root-app.yaml` is a reference pattern; bootstrap applies **leaf** `argocd/applications/*.yaml` with your repo URL substituted so Argo never syncs unresolved `REPO_URL_PLACEHOLDER` from git.
 4. **ignoreDifferences** — Local image loaded via `kind load` isn’t in git; prevents sync loops.
-5. **Promotion** — `fin-enterprise-api-local` → `fin-enterprise-api-staging` → prod overlays; same pattern as Artifactory image promotion.
+5. **Promotion** — `fin-enterprise-api-local` → `fin-enterprise-api-staging` → prod overlays; image tags move with overlays (e.g. GHCR digest or `kubectl set image` in CI).
 
 ## Troubleshooting
 

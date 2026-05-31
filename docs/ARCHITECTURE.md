@@ -64,7 +64,6 @@ Alternatives considered: e-commerce (less relevant for institutional finance), g
 |----------|------|-----|
 | GHCR | Default on merge to `main` | Same vendor as CI; `GITHUB_TOKEN`; no extra registry secret |
 | Docker Hub | Optional mirror | Familiar public path when secrets are configured |
-| Artifactory | Optional staging/prod | RBAC, Xray, promotion; GKE DR can pull from here if `ARTIFACTORY_URL` is set |
 
 ## Deployment targets
 

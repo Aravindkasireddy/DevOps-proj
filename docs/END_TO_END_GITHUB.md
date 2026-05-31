@@ -11,7 +11,7 @@ This project is wired so **GitHub is the control plane** for source, CI/CD, cont
 | **CD** | `ci-cd.yml` on `main` — Python → build/Trivy → **push to GHCR** → **Kind deploy** (`deploy-kind`, same overlay as `make kind-apply`) → optional **Terraform** (`terraform-cloud-iac` if `TERRAFORM_CI_ENABLED=true`) → optional **EKS** if `EKS_STAGING_ENABLED` |
 | **Registry** | **GitHub Container Registry** (`ghcr.io/<lowercase-owner>/financial-enterprise-asset-api`) using `GITHUB_TOKEN` |
 | **Supply chain** | Trivy SARIF → GitHub Security / Code scanning |
-| **Optional mirrors** | Docker Hub and JFrog Artifactory when repo secrets are set |
+| **Optional mirrors** | Docker Hub when `DOCKERHUB_*` secrets are set |
 
 ## Permissions
 
@@ -21,7 +21,7 @@ This project is wired so **GitHub is the control plane** for source, CI/CD, cont
 
 **Minimal (GHCR only):** no container registry secrets required; `secrets: inherit` passes `GITHUB_TOKEN` implicitly for GHCR login.
 
-**Optional mirrors:** set `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` and/or Artifactory secrets as documented in [CICD_REUSABLE.md](CICD_REUSABLE.md).
+**Optional mirror:** set `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` as documented in [CICD_REUSABLE.md](CICD_REUSABLE.md).
 
 **Kind “staging” on CI:** **`deploy-kind`** runs on every `main` push after the image is on GHCR. It does **not** use Terraform (no VPC/EKS resources — only `kubectl` + `k8s/overlays/local`).
 

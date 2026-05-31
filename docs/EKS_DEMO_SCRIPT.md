@@ -50,7 +50,6 @@ flowchart TB
   subgraph reg["Registries"]
     GHCR[GHCR ghcr.io]
     DH[Docker Hub optional]
-    ART[JFrog Artifactory optional]
   end
 
   subgraph aws["AWS us-east-1"]
@@ -74,7 +73,6 @@ flowchart TB
   CODE --> CI --> CD
   CD --> GHCR
   CD --> DH
-  CD --> ART
   CD --> TF
   TF --> VPC --> EKS
   TF --> RDS
@@ -134,7 +132,7 @@ flowchart TB
 
 | Job | Purpose | Interview hook |
 |-----|---------|----------------|
-| `build-scan-push` | Docker build, **Trivy**, push **GHCR** (+ optional Hub / Artifactory) | Supply chain |
+| `build-scan-push` | Docker build, **Trivy**, push **GHCR** (+ optional Docker Hub) | Supply chain |
 | `terraform-cloud-iac` | fmt + Checkov + `terraform validate` (aws + gcp) | Shift-left on **cloud** IaC; **opt-in** via `TERRAFORM_CI_ENABLED=true` (not used by Kind) |
 | `deploy-kind` | Kind cluster on runner; pull GHCR image → `kind load` → `k8s/overlays/local` | Same as laptop `make kind-apply`, but image is the **SHA tag from CI** |
 | `deploy-staging` | `kubectl apply -k k8s/overlays/staging` (EKS) | **Opt-in:** set repo variable `EKS_STAGING_ENABLED=true` + `AWS_ROLE_ARN`; GitOps alternative: Argo CD |

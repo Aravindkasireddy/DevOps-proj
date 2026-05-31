@@ -9,5 +9,5 @@ fi
 
 echo "Next steps:"
 echo "  1. Create GitHub repo: gh repo create financial-enterprise-devops-platform --private --source=. --remote=origin"
-echo "  2. Configure secrets: DOCKERHUB_*, ARTIFACTORY_*, AWS_ROLE_ARN, GCP_*"
+echo "  2. Configure secrets: DOCKERHUB_*, AWS_ROLE_ARN, GCP_*"
 echo "  3. git add . && git commit -m 'Initial Financial Enterprise DevOps platform' && git push -u origin main"

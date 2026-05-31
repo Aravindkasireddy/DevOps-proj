@@ -40,7 +40,7 @@ alembic -c database/alembic.ini upgrade head
 ## Incident: failed deployment
 
 1. `kubectl describe pod -l app=fin-enterprise-api -n fin-enterprise-staging`
-2. Verify image exists in registry (GHCR, or Artifactory if that path is configured for the cluster)
+2. Verify image exists in the configured registry (typically GHCR)
 3. Check Trivy SARIF in GitHub Security tab for blocked CVEs
 
 ## Terraform drift

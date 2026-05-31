@@ -14,18 +14,18 @@ This repo runs **static analysis + coverage** in GitHub Actions using the offici
    - **Variables** tab (not Encrypted): add  
      - `SONAR_ORGANIZATION` = your organization key  
      - `SONAR_PROJECT_KEY` = your project key  
-5. Push to **`main`** / **`develop`** or open a **PR** — workflow **SonarQube** runs when all three are set.
+5. **Where it runs:** With all three values set, the scan runs from **CI/CD** on every push to **`main`** (job **SonarQube (deploy gate)**) before **Kind** or **EKS** deploy; if the scan or quality gate fails, those deploy jobs do not run. The standalone **SonarQube** workflow runs on **`develop`** pushes, **PRs** to `main`/`develop`, and **workflow_dispatch** (so `main` is not scanned twice on push).
 
 6. **Use only one analysis mode on SonarCloud.** This repo uses **GitHub Actions** (`sonarqube-scan-action`). In SonarCloud, open the project → **Administration** → **Analysis Method** (or **General Settings** → analysis / automatic analysis, depending on UI) and **turn off Automatic Analysis** so Sonar does not also scan the repo on every push from Sonar’s side. If both are on, the scanner fails with:  
    `You are running CI analysis while Automatic Analysis is enabled. Please consider disabling one or the other.`
 
-The workflow **skips the scan** (with a green notice) until `SONAR_TOKEN`, `SONAR_ORGANIZATION`, and `SONAR_PROJECT_KEY` exist. GitHub does not allow `secrets.*` in **job-level** `if:` expressions, so this repo gates inside a step instead.
+The reusable scan **skips** (with a green notice) until `SONAR_TOKEN`, `SONAR_ORGANIZATION`, and `SONAR_PROJECT_KEY` exist; in that case the deploy gate still succeeds so **Kind/EKS** can run without Sonar configured. GitHub does not allow `secrets.*` in **job-level** `if:` expressions, so this repo gates inside a step instead.
 
 ## Troubleshooting
 
 | Log / symptom | What to do |
 |----------------|------------|
-| `CI analysis while Automatic Analysis is enabled` | In SonarCloud: **disable Automatic Analysis** for this project (keep CI / GitHub Actions only). See step 6 above. |
+| `CI analysis while Automatic Analysis is enabled` | In SonarCloud: **disable Automatic Analysis** for this project (keep CI / GitHub Actions only). See the numbered setup step on Automatic Analysis above. |
 | Quality Gate failed (exit code 3 after analysis completes) | Fix issues in SonarCloud, or temporarily set `sonar.qualitygate.wait=false` in `sonar-project.properties` (CI stays green; gate still visible in SonarCloud). |
 | Invalid workflow / job never runs | Ensure job-level `if:` does not reference `secrets` (this repo uses a gate **step** instead). |
 
@@ -37,7 +37,7 @@ The workflow **skips the scan** (with a green notice) until `SONAR_TOKEN`, `SONA
    - `SONAR_HOST_URL` — base URL of your server (e.g. `https://sonar.company.com`)
 3. Set repo **Variables** `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY` as on the server.
 
-Under the **SonarQube Scan** step in [`.github/workflows/sonarqube.yml`](../.github/workflows/sonarqube.yml), add to `env:`:
+Under the **SonarQube Scan** step in [`.github/workflows/reusable-sonarqube-scan.yml`](../.github/workflows/reusable-sonarqube-scan.yml) (used by `sonarqube.yml` and **CI/CD**), add to `env:`:
 
 ```yaml
 SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -54,4 +54,4 @@ SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
 ## Related
 
-- [CICD_REUSABLE.md](CICD_REUSABLE.md) — Python / Docker reusable workflows (Sonar is a separate top-level workflow by design).
+- [CICD_REUSABLE.md](CICD_REUSABLE.md) — Python / Docker reusable workflows; **CI/CD** also calls the reusable Sonar scan before Kind/EKS deploy.

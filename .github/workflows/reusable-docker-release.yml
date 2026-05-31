@@ -1,4 +1,4 @@
-# Reusable: Docker build + Trivy + push — GitHub Container Registry (GHCR) first, optional Docker Hub / Artifactory
+# Reusable: Docker build + Trivy + push — GitHub Container Registry (GHCR) first, optional Docker Hub mirror
 # End-to-end GitHub: uses GITHUB_TOKEN for ghcr.io (no Docker Hub secret required).
 name: Reusable — Docker build scan push
 
@@ -17,12 +17,6 @@ on:
       DOCKERHUB_USERNAME:
         required: false
       DOCKERHUB_TOKEN:
-        required: false
-      ARTIFACTORY_URL:
-        required: false
-      ARTIFACTORY_USER:
-        required: false
-      ARTIFACTORY_PASSWORD:
         required: false
 
 permissions:
@@ -43,25 +37,16 @@ jobs:
         env:
           DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          ART_URL: ${{ secrets.ARTIFACTORY_URL }}
-          ART_USER: ${{ secrets.ARTIFACTORY_USER }}
-          ART_PASS: ${{ secrets.ARTIFACTORY_PASSWORD }}
         run: |
           if [ -n "${DH_TOKEN}" ] && [ -n "${DH_USER}" ]; then
             echo "dockerhub=true" >> "$GITHUB_OUTPUT"
           else
             echo "dockerhub=false" >> "$GITHUB_OUTPUT"
           fi
-          if [ -n "${ART_URL}" ] && [ -n "${ART_USER}" ] && [ -n "${ART_PASS}" ]; then
-            echo "artifactory=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "artifactory=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Compute registry image names
         id: reg
         env:
-          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
           DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
@@ -75,9 +60,6 @@ jobs:
             echo "${GHCR}"
             if [ -n "${DH_TOKEN}" ] && [ -n "${DH_USER}" ]; then
               echo "docker.io/${{ inputs.dockerhub-image-path }}"
-            fi
-            if [ -n "${ARTIFACTORY_URL}" ]; then
-              echo "${ARTIFACTORY_URL}/docker-staging-local/${{ inputs.dockerhub-image-path }}"
             fi
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
@@ -136,14 +118,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Login Artifactory (optional)
-        if: steps.flags.outputs.artifactory == 'true'
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ secrets.ARTIFACTORY_URL }}
-          username: ${{ secrets.ARTIFACTORY_USER }}
-          password: ${{ secrets.ARTIFACTORY_PASSWORD }}
 
       - name: Push images
         uses: docker/build-push-action@v7

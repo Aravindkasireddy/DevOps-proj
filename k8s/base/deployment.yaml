@@ -54,4 +54,4 @@ spec:
               cpu: 500m
               memory: 512Mi
       # imagePullSecrets:
-      #   - name: artifactory-creds
+      #   - name: ghcr-pull  # if the cluster pulls private GHCR images

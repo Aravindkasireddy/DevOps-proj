@@ -1,14 +1,16 @@
 # SonarQube Cloud / Server — static analysis + Python coverage
 # Skips until SONAR_TOKEN + repo Variables SONAR_ORGANIZATION + SONAR_PROJECT_KEY are set.
-# Note: `secrets` cannot be used in job-level `if` (workflow invalid); gate runs in a step instead.
+# On `main` push, CI/CD also runs this reusable workflow before Kind/EKS deploy (see ci-cd.yml).
+# This workflow: develop pushes + PRs + manual (no duplicate main push vs ci-cd).
 # Setup: docs/SONARQUBE.md
 name: SonarQube
 
 on:
   push:
-    branches: [main, develop]
+    branches: [develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,50 +19,5 @@ permissions:
 jobs:
   sonarqube:
     name: Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Evaluate Sonar configuration
-        id: gate
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ -n "${SONAR_TOKEN}" ] && [ -n "${{ vars.SONAR_ORGANIZATION }}" ] \
-            && [ -n "${{ vars.SONAR_PROJECT_KEY }}" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Skip Sonar (missing configuration)
-        if: steps.gate.outputs.enabled != 'true'
-        run: 'echo "::notice::Skipping SonarQube — add SONAR_TOKEN and Variables SONAR_ORGANIZATION, SONAR_PROJECT_KEY (see docs/SONARQUBE.md)."'
-
-      - uses: actions/checkout@v6
-        if: steps.gate.outputs.enabled == 'true'
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-python@v6
-        if: steps.gate.outputs.enabled == 'true'
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install dependencies
-        if: steps.gate.outputs.enabled == 'true'
-        run: pip install -e ".[dev]"
-
-      - name: Unit tests with coverage
-        if: steps.gate.outputs.enabled == 'true'
-        run: pytest app/tests --cov=app --cov-report=xml --cov-report=term
-
-      - name: SonarQube Scan
-        if: steps.gate.outputs.enabled == 'true'
-        uses: SonarSource/sonarqube-scan-action@v8.1.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: >
-            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+    uses: ./.github/workflows/reusable-sonarqube-scan.yml
+    secrets: inherit

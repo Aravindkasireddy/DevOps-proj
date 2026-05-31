@@ -10,7 +10,7 @@ This repo uses **`workflow_call`** so Python checks and Docker build/push live i
 |----------|---------|
 | [reusable-python-ci.yml](../.github/workflows/reusable-python-ci.yml) | Ruff, MyPy, Bandit, pytest + optional Codecov |
 | [reusable-docker-pr-build.yml](../.github/workflows/reusable-docker-pr-build.yml) | Docker build only (no push, no Trivy) — PR CI |
-| [reusable-docker-release.yml](../.github/workflows/reusable-docker-release.yml) | Build, Trivy SARIF, push **GHCR** + optional Docker Hub / Artifactory mirrors |
+| [reusable-docker-release.yml](../.github/workflows/reusable-docker-release.yml) | Build, Trivy SARIF, push **GHCR** + optional Docker Hub mirror |
 
 ## Callers
 
@@ -39,7 +39,7 @@ jobs:
       dockerhub-image-path: financial-enterprise/asset-api
 ```
 
-- **`secrets: inherit`** passes repository secrets to the reusable workflow. GHCR push does **not** require extra secrets; optional Docker Hub / Artifactory logins use `DOCKERHUB_*` and `ARTIFACTORY_*` when set.
+- **`secrets: inherit`** passes repository secrets to the reusable workflow. GHCR push does **not** require extra secrets; optional Docker Hub login uses `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` when set.
 - Reusable workflows that declare `secrets:` under `workflow_call` only receive secrets the **child** declares; `inherit` maps matching names.
 
 ## Inputs (`reusable-python-ci`)

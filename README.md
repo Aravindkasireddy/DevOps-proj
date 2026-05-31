@@ -12,14 +12,15 @@ Production-style reference project for **Financial Enterprise Application**: a p
 └─────────────┘     └──────────────┘     │ lint · test · SAST · build · scan   │
                                          └──────────┬──────────────────────────┘
                                                     │
-                    ┌───────────────────────────────┼───────────────────────────────┐
-                    ▼                               ▼                               ▼
-            ┌───────────────┐              ┌────────────────┐              ┌─────────────────┐
-            │ GHCR          │              │ JFrog          │              │ Checkov (IaC)   │
-            │ (+ opt. Hub)  │              │ Artifactory    │              │ Terraform scan  │
-            └───────┬───────┘              └────────┬───────┘              └────────┬────────┘
-                    │                               │                               │
-                    └───────────────────────────────┼───────────────────────────────┘
+                    ┌───────────────────────────────┴───────────────────────────────┐
+                    ▼                                                               ▼
+            ┌───────────────┐                                              ┌─────────────────┐
+            │ GHCR          │                                              │ Checkov (IaC)   │
+            │ Trivy · opt.  │                                              │ Terraform scan  │
+            │ Docker Hub    │                                              │                 │
+            └───────┬───────┘                                              └────────┬────────┘
+                    │                                                               │
+                    └───────────────────────────────┬───────────────────────────────┘
                                                     ▼
                               ┌─────────────────────────────────────────┐
                               │ Terraform (Hybrid Cloud)                │
@@ -96,7 +97,6 @@ See **[docs/KIND_ARGOCD.md](docs/KIND_ARGOCD.md)** for the full walkthrough.
 | **Terraform** | `terraform/` | IaC, modules, state, workspaces |
 | **AWS + GCP** | `terraform/aws`, `terraform/gcp` | Hybrid cloud, DR, multi-region |
 | **GHCR** | `ci-cd.yml` | Primary registry (`GITHUB_TOKEN`); optional Docker Hub mirror |
-| **Artifactory** | `ci-cd.yml`, `docker/artifactory.md` | Optional enterprise mirror / GKE override |
 | **Kind** | `kind/`, `make kind-up` | Local Kubernetes |
 | **Argo CD** | `argocd/` | GitOps, app-of-apps, drift sync |
 | **EKS / GKE** | `k8s/` | Orchestration, HPA, ingress |
