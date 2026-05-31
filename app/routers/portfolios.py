@@ -1,6 +1,7 @@
+from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,6 +15,7 @@ from app.schemas import (
     NavSnapshotRead,
     PortfolioCreate,
     PortfolioRead,
+    PortfolioSummaryRead,
 )
 
 router = APIRouter(prefix="/api/v1/portfolios", tags=["portfolios"])
@@ -34,8 +36,18 @@ async def create_portfolio(payload: PortfolioCreate, db: DbSession) -> Portfolio
 
 
 @router.get("", response_model=list[PortfolioRead])
-async def list_portfolios(db: DbSession) -> list[Portfolio]:
-    result = await db.scalars(select(Portfolio).order_by(Portfolio.id))
+async def list_portfolios(
+    db: DbSession,
+    strategy: str | None = Query(
+        default=None,
+        description="When set, return only portfolios with this strategy code.",
+        max_length=64,
+    ),
+) -> list[Portfolio]:
+    stmt = select(Portfolio).order_by(Portfolio.id)
+    if strategy is not None and strategy != "":
+        stmt = stmt.where(Portfolio.strategy == strategy)
+    result = await db.scalars(stmt)
     return list(result.all())
 
 
@@ -96,8 +108,8 @@ async def record_nav(
     return snapshot
 
 
-@router.get("/{portfolio_id}/summary")
-async def portfolio_summary(portfolio_id: int, db: DbSession) -> dict[str, str | int | None]:
+@router.get("/{portfolio_id}/summary", response_model=PortfolioSummaryRead)
+async def portfolio_summary(portfolio_id: int, db: DbSession) -> PortfolioSummaryRead:
     stmt = (
         select(Portfolio)
         .where(Portfolio.id == portfolio_id)
@@ -106,12 +118,15 @@ async def portfolio_summary(portfolio_id: int, db: DbSession) -> dict[str, str |
     portfolio = await db.scalar(stmt)
     if not portfolio:
         raise HTTPException(status_code=404, detail="Portfolio not found")
-    total_cost = sum((h.quantity * h.cost_basis for h in portfolio.holdings), start=0)
+    total_cost = sum(
+        (h.quantity * h.cost_basis for h in portfolio.holdings),
+        start=Decimal(0),
+    )
     latest_nav = max((n.nav for n in portfolio.nav_snapshots), default=None)
-    return {
-        "portfolio_id": portfolio.id,
-        "name": portfolio.name,
-        "holdings_count": len(portfolio.holdings),
-        "total_cost_basis": str(total_cost),
-        "latest_nav": str(latest_nav) if latest_nav else None,
-    }
+    return PortfolioSummaryRead(
+        portfolio_id=portfolio.id,
+        name=portfolio.name,
+        holdings_count=len(portfolio.holdings),
+        total_cost_basis=total_cost,
+        latest_nav=latest_nav,
+    )

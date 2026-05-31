@@ -60,8 +60,19 @@ class NavSnapshotRead(BaseModel):
     created_at: datetime
 
 
+class PortfolioSummaryRead(BaseModel):
+    """Aggregated view for dashboards and risk snapshots."""
+
+    portfolio_id: int
+    name: str
+    holdings_count: int
+    total_cost_basis: Decimal
+    latest_nav: Decimal | None = None
+
+
 class HealthResponse(BaseModel):
     status: str
     app: str
     environment: str
     database: str
+    version: str = Field(default="unknown", description="Package version from distribution metadata")

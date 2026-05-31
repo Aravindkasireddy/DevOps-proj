@@ -14,6 +14,7 @@ from app.logging_config import setup_logging
 from app.metrics import APP_INFO, REQUEST_COUNT, REQUEST_LATENCY, metrics_payload
 from app.routers import portfolios
 from app.schemas import HealthResponse
+from app.version import package_version
 
 settings = get_settings()
 setup_logging(settings.log_level)
@@ -25,7 +26,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await conn.run_sync(Base.metadata.create_all)
     APP_INFO.info(
         {
-            "version": "1.0.0",
+            "version": package_version(),
             "client": "fin-enterprise-application",
             "env": settings.app_env,
         }
@@ -37,7 +38,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Financial Enterprise Application API",
     description="Portfolio, holdings, and NAV management for institutional asset management.",
-    version="1.0.0",
+    version=package_version(),
     lifespan=lifespan,
 )
 app.include_router(portfolios.router)
@@ -79,6 +80,7 @@ async def health() -> HealthResponse:
         app=settings.app_name,
         environment=settings.app_env,
         database="unknown",
+        version=package_version(),
     )
 
 
@@ -95,6 +97,7 @@ async def ready() -> HealthResponse:
         app=settings.app_name,
         environment=settings.app_env,
         database=db_status,
+        version=package_version(),
     )
 
 
@@ -105,4 +108,8 @@ async def metrics() -> PlainTextResponse:
 
 @app.get("/", tags=["ops"])
 async def root() -> dict[str, str]:
-    return {"service": settings.app_name, "docs": "/docs"}
+    return {
+        "service": settings.app_name,
+        "version": package_version(),
+        "docs": "/docs",
+    }

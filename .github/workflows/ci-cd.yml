@@ -39,7 +39,9 @@ jobs:
       dockerhub-image-path: financial-enterprise/asset-api
 
   terraform-plan:
-    name: Terraform Plan (AWS + GCP)
+    # init + validate only: `terraform plan` needs live AWS/GCP credentials and fails on public CI.
+    # Run plan locally or use terraform-apply.yml with secrets when you have cloud access.
+    name: Terraform init & validate (AWS + GCP)
     runs-on: ubuntu-latest
     needs: build-scan-push
     strategy:
@@ -48,21 +50,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.9.8
 
       - name: Terraform fmt check
         run: terraform fmt -check -recursive terraform/
 
-      - name: Terraform init & plan (${{ matrix.cloud }})
+      - name: Terraform init & validate (${{ matrix.cloud }})
         working-directory: terraform/${{ matrix.cloud }}
         env:
           TF_VAR_environment: staging
+          # Required by terraform/gcp/variables.tf (no default); not used for API calls during validate.
+          TF_VAR_project: fin-enterprise-demo
         run: |
           terraform init -backend=false
           terraform validate
-          terraform plan -input=false -out=tfplan
 
       - name: Checkov IaC scan
         uses: bridgecrewio/checkov-action@v12
@@ -71,12 +74,6 @@ jobs:
           framework: terraform
           soft_fail: false
           output_format: cli
-
-      - name: Upload Terraform plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ matrix.cloud }}
-          path: terraform/${{ matrix.cloud }}/tfplan
 
   deploy-staging:
     name: Deploy Staging (Kubernetes)

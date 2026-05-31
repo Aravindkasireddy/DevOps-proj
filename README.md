@@ -87,6 +87,7 @@ See **[docs/KIND_ARGOCD.md](docs/KIND_ARGOCD.md)** for the full walkthrough.
 | **Ruff / MyPy** | `app/`, CI | Linting, static typing |
 | **pytest + coverage** | `app/tests/` | Unit testing, quality gates |
 | **Bandit** | CI | Python SAST |
+| **SonarQube Cloud** | `sonarqube.yml` (optional) | Centralized quality + coverage; needs `SONAR_*` setup |
 | **Trivy** | CI | Container image scanning |
 | **Checkov** | CI + `terraform/` | IaC security (CIS, misconfig) |
 | **GitHub Actions** | `.github/workflows/` | SCM hooks, pipelines, environments |
@@ -128,6 +129,7 @@ Configure via Terraform workspaces — see `docs/ARCHITECTURE.md`.
 - [Kind + Argo CD lab](docs/KIND_ARGOCD.md)
 - [**Reusable GitHub Actions**](docs/CICD_REUSABLE.md) — `workflow_call` Python + Docker workflows
 - [**End-to-end GitHub (GHCR)**](docs/END_TO_END_GITHUB.md) — permissions, secrets, private pull guidance
+- [**SonarQube / SonarCloud**](docs/SONARQUBE.md) — optional code quality + coverage in Actions
 
 ## Client context
 
