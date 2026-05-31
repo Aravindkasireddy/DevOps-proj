@@ -4,7 +4,10 @@ name: Reusable SonarQube scan
 
 on:
   workflow_call:
-    secrets: inherit
+    # Callers use `secrets: inherit`; the callee must list secrets here (not `inherit`).
+    secrets:
+      SONAR_TOKEN:
+        required: false
 
 permissions:
   contents: read
