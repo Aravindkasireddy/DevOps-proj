@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Enterprise CI/CD Pipeline Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0c10;
+    --bg2: #0f1217;
+    --bg3: #141820;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.14);
+    --text: #e2e4ea;
+    --muted: #6b7280;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.12);
+    --teal: #2dd4bf;
+    --teal-dim: rgba(45,212,191,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+    --coral: #fb7185;
+    --coral-dim: rgba(251,113,133,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    padding: 40px 24px 80px;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 52px;
+  }
+
+  .page-header h1 {
+    font-family: var(--sans);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .page-header p {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .pipeline {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* Connector between stages */
+  .connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 28px;
+    position: relative;
+  }
+  .connector::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--border-bright), var(--border));
+  }
+  .connector-arrow {
+    width: 20px;
+    height: 20px;
+    border-right: 1.5px solid var(--border-bright);
+    border-bottom: 1.5px solid var(--border-bright);
+    transform: rotate(45deg);
+    background: var(--bg);
+    z-index: 1;
+  }
+
+  /* Stage container */
+  .stage {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg2);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stage:hover { border-color: var(--border-bright); }
+
+  .stage-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .stage-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    min-width: 24px;
+  }
+
+  .stage-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .stage-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+  }
+
+  .stage-body {
+    padding: 16px 20px;
+  }
+
+  /* Rows inside a stage */
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .row + .row { margin-top: 8px; }
+
+  /* Individual node cards */
+  .node {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s, border-color 0.15s;
+    min-width: 120px;
+    flex: 1;
+  }
+  .node:hover { transform: translateY(-2px); opacity: 0.9; }
+
+  .node-title {
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--sans);
+    white-space: nowrap;
+  }
+  .node-sub {
+    font-size: 10px;
+    opacity: 0.65;
+    white-space: nowrap;
+    font-family: var(--mono);
+  }
+
+  /* Arrow between nodes in a row */
+  .arrow {
+    color: var(--muted);
+    font-size: 14px;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  /* Color variants */
+  .purple  { background: var(--purple-dim);  border-color: rgba(167,139,250,0.25); }
+  .purple .node-title  { color: var(--purple); }
+  .teal    { background: var(--teal-dim);    border-color: rgba(45,212,191,0.25); }
+  .teal .node-title    { color: var(--teal); }
+  .blue    { background: var(--blue-dim);    border-color: rgba(96,165,250,0.25); }
+  .blue .node-title    { color: var(--blue); }
+  .coral   { background: var(--coral-dim);   border-color: rgba(251,113,133,0.25); }
+  .coral .node-title   { color: var(--coral); }
+  .amber   { background: var(--amber-dim);   border-color: rgba(251,191,36,0.25); }
+  .amber .node-title   { color: var(--amber); }
+  .green   { background: var(--green-dim);   border-color: rgba(74,222,128,0.25); }
+  .green .node-title   { color: var(--green); }
+  .red     { background: var(--red-dim);     border-color: rgba(248,113,113,0.25); }
+  .red .node-title     { color: var(--red); }
+
+  /* badge colors */
+  .badge-auto    { background: rgba(74,222,128,0.15);  color: var(--green); }
+  .badge-human   { background: rgba(251,191,36,0.15);  color: var(--amber); }
+  .badge-infra   { background: rgba(96,165,250,0.15);  color: var(--blue);  }
+  .badge-secure  { background: rgba(248,113,113,0.15); color: var(--red);   }
+  .badge-observe { background: rgba(167,139,250,0.15); color: var(--purple);}
+
+  /* Feedback loop banner */
+  .feedback-loop {
+    margin-top: 20px;
+    border: 1px dashed var(--border-bright);
+    border-radius: 10px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg2);
+  }
+  .feedback-loop span { font-size: 18px; }
+
+  /* Detail panel */
+  .detail-panel {
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    width: 320px;
+    background: #0f1217;
+    border-left: 1px solid var(--border-bright);
+    padding: 28px 24px;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .detail-panel.open { transform: translateX(0); }
+  .detail-panel h3 {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .detail-panel p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #9ca3af;
+    margin-bottom: 14px;
+  }
+  .detail-panel .tools-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .detail-panel .tool-tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border-bright);
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .close-btn {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 18px; line-height: 1;
+    padding: 4px;
+  }
+  .close-btn:hover { color: #fff; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  @media (max-width: 700px) {
+    .node { min-width: 100px; }
+    .detail-panel { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Enterprise CI/CD Pipeline Architecture</h1>
+  <p>From commit to production — click any node to learn more</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Source control</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>Quality checks</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fb7185"></div>Testing</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Security / Approval</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>Deployment</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2dd4bf"></div>Production / Infra</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div>Observability</div>
+</div>
+
+<div class="pipeline">
+
+  <!-- STAGE 1 -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">01</span>
+      <span class="stage-title">Source Control</span>
+      <span class="stage-badge badge-auto">automated gate</span>
+    </div>
+    <div class="stage-body">
+      <div class="row">
+        <div class="node purple" onclick="showDetail('feature-branch')">
+          <span class="node-title">Feature branch</span>
+          <span class="node-sub">Dev commits code</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node purple" onclick="showDetail('pull-request')">
+          <span class="node-title">Pull request</span>
+          <span class="node-sub">Peer review required</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node teal" onclick="showDetail('branch-protection')">
+          <span class="node-title">Branch protection</span>
+          <span class="node-sub">Enforced merge rules</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node teal" onclick="showDetail('codeowners')">
+          <span class="node-title">CODEOWNERS</span>
+          <span class="node-sub">Auto-assign reviewers</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- STAGE 2 -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">02</span>
+      <span class="stage-title">Continuous Integration</span>
+      <span class="stage-badge badge-auto">fully automated</span>
+    </div>
+    <div class="stage-body">
+      <div class="row">
+        <div class="node blue" onclick="showDetail('lint')">
+          <span class="node-title">Lint &amp; format</span>
+          <span class="node-sub">Ruff, ESLint</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node blue" onclick="showDetail('typecheck')">
+          <span class="node-title">Type check</span>
+          <span class="node-sub">MyPy, TypeScript</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node blue" onclick="showDetail('sast')">
+          <span class="node-title">SAST scan</span>
+          <span class="node-sub">Bandit, SonarQube</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node blue" onclick="showDetail('secret-scan')">
+          <span class="node-title">Secret scan</span>
+          <span class="node-sub">Gitleaks, Trufflehog</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node blue" onclick="showDetail('sca')">
+          <span class="node-title">SCA scan</span>
+          <span class="node-sub">Snyk, Dependabot</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="node coral" onclick="showDetail('unit-tests')">
+          <span class="node-title">Unit tests</span>
+          <span class="node-sub">Pytest, Jest — fast</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node coral" onclick="showDetail('integration-tests')">
+          <span class="node-title">Integration tests</span>
+          <span class="node-sub">DB, API, services</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node coral" onclick="showDetail('coverage-gate')">
+          <span class="node-title">Coverage gate</span>
+          <span class="node-sub">≥ 80% or fail</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node amber" onclick="showDetail('docker-build')">
+          <span class="node-title">Docker build</span>
+          <span class="node-sub">Build &amp; tag image</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- STAGE 3 -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">03</span>
+      <span class="stage-title">Artifact &amp; Container Security</span>
+      <span class="stage-badge badge-secure">security gate</span>
+    </div>
+    <div class="stage-body">
+      <div class="row">
+        <div class="node amber" onclick="showDetail('registry')">
+          <span class="node-title">Push to registry</span>
+          <span class="node-sub">ECR, Artifactory</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node red" onclick="showDetail('image-scan')">
+          <span class="node-title">Image scan</span>
+          <span class="node-sub">Trivy, Grype — CVEs</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node red" onclick="showDetail('image-sign')">
+          <span class="node-title">Sign image</span>
+          <span class="node-sub">Cosign, Notary</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node teal" onclick="showDetail('sbom')">
+          <span class="node-title">SBOM</span>
+          <span class="node-sub">Software bill of materials</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- STAGE 4 -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">04</span>
+      <span class="stage-title">Deploy — Dev &amp; Staging</span>
+      <span class="stage-badge badge-infra">pre-prod environments</span>
+    </div>
+    <div class="stage-body">
+      <div class="row">
+        <div class="node green" onclick="showDetail('gitops')">
+          <span class="node-title">GitOps deploy</span>
+          <span class="node-sub">ArgoCD, Flux</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node green" onclick="showDetail('dev-env')">
+          <span class="node-title">Dev env</span>
+          <span class="node-sub">Kubernetes namespace</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node green" onclick="showDetail('staging-env')">
+          <span class="node-title">Staging env</span>
+          <span class="node-sub">Mirror of production</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node blue" onclick="showDetail('dast')">
+          <span class="node-title">Smoke + DAST</span>
+          <span class="node-sub">OWASP ZAP, k6</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="node coral" onclick="showDetail('e2e')">
+          <span class="node-title">E2E tests</span>
+          <span class="node-sub">Playwright, Cypress</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node coral" onclick="showDetail('perf-test')">
+          <span class="node-title">Perf testing</span>
+          <span class="node-sub">k6, Locust, Gatling</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node amber" onclick="showDetail('compliance-gate')">
+          <span class="node-title">Compliance gate</span>
+          <span class="node-sub">HIPAA / SOC2 — automated evidence</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- STAGE 5 -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">05</span>
+      <span class="stage-title">Approval Gate</span>
+      <span class="stage-badge badge-human">human in the loop</span>
+    </div>
+    <div class="stage-body">
+      <div class="row">
+        <div class="node amber" onclick="showDetail('cab')">
+          <span class="node-title">CAB / change request</span>
+          <span class="node-sub">Jira, ServiceNow ticket</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node amber" onclick="showDetail('manager-approval')">
+          <span class="node-title">Manager approval</span>
+          <span class="node-sub">Required sign-off</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node amber" onclick="showDetail('deploy-window')">
+          <span class="node-title">Deployment window</span>
+          <span class="node-sub">e.g. Tue 2–4am only</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node teal" onclick="showDetail('audit-log')">
+          <span class="node-title">Audit log</span>
+          <span class="node-sub">Immutable — HIPAA/SOC2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- STAGE 6 -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">06</span>
+      <span class="stage-title">Production Deployment</span>
+      <span class="stage-badge badge-infra">zero downtime</span>
+    </div>
+    <div class="stage-body">
+      <div class="row">
+        <div class="node teal" onclick="showDetail('blue-green')">
+          <span class="node-title">Blue/green deploy</span>
+          <span class="node-sub">Zero downtime swap</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node teal" onclick="showDetail('canary')">
+          <span class="node-title">Canary deploy</span>
+          <span class="node-sub">5% traffic first</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node teal" onclick="showDetail('rolling-update')">
+          <span class="node-title">Rolling update</span>
+          <span class="node-sub">Pod-by-pod replace</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node red" onclick="showDetail('rollback')">
+          <span class="node-title">Auto rollback</span>
+          <span class="node-sub">On error rate spike</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- STAGE 7 -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">07</span>
+      <span class="stage-title">Observability — Post Deploy</span>
+      <span class="stage-badge badge-observe">continuous watch</span>
+    </div>
+    <div class="stage-body">
+      <div class="row">
+        <div class="node" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.25)" onclick="showDetail('metrics')">
+          <span class="node-title" style="color:#a78bfa">Metrics</span>
+          <span class="node-sub">Prometheus + Grafana</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.25)" onclick="showDetail('logs')">
+          <span class="node-title" style="color:#a78bfa">Log aggregation</span>
+          <span class="node-sub">Loki, ELK, Splunk</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node" style="background:rgba(167,139,250,0.12);border-color:rgba(167,139,250,0.25)" onclick="showDetail('tracing')">
+          <span class="node-title" style="color:#a78bfa">Tracing</span>
+          <span class="node-sub">Jaeger, Datadog</span>
+        </div>
+        <span class="arrow">›</span>
+        <div class="node teal" onclick="showDetail('snogo')">
+          <span class="node-title">Alert → ticket</span>
+          <span class="node-sub">Snogo → ServiceNow</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback loop -->
+  <div class="feedback-loop">
+    <span>↻</span>
+    <div>
+      <strong style="color:var(--text);font-family:var(--sans);font-size:12px">Feedback loop</strong>
+      <div style="margin-top:3px">Production incidents create ServiceNow tickets → developer opens a feature branch → pipeline starts again from Stage 01</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detail-panel">
+  <button class="close-btn" onclick="closeDetail()">✕</button>
+  <h3 id="detail-title"></h3>
+  <p id="detail-desc"></p>
+  <p id="detail-why"></p>
+  <div class="tools-list" id="detail-tools"></div>
+</div>
+
+<script>
+const details = {
+  'feature-branch': {
+    title: 'Feature branch',
+    desc: 'Every change starts on its own isolated branch (e.g. feature/JIRA-123-add-login). This means work-in-progress never breaks the main branch. Named after the ticket ID for traceability.',
+    why: 'If you push directly to main you break everyone. Branches isolate the blast radius of incomplete or broken work.',
+    tools: ['Git', 'GitHub', 'GitLab', 'Bitbucket']
+  },
+  'pull-request': {
+    title: 'Pull request',
+    desc: 'A formal request to merge your branch into main. Triggers automated CI checks and requires at least one human reviewer to approve before merge is allowed.',
+    why: 'Two sets of eyes catch more bugs. The PR is also the audit record — every change in production has a PR showing who approved it and why.',
+    tools: ['GitHub PRs', 'GitLab MRs', 'Azure DevOps']
+  },
+  'branch-protection': {
+    title: 'Branch protection rules',
+    desc: 'Rules enforced by GitHub/GitLab at the repo level. Common rules: all CI checks must pass, at least 1 approval required, force-push disabled, stale reviews dismissed on new commits.',
+    why: 'Prevents developers from bypassing the pipeline, even accidentally. In regulated industries this is mandatory for SOC2/HIPAA.',
+    tools: ['GitHub branch protection', 'GitLab protected branches']
+  },
+  'codeowners': {
+    title: 'CODEOWNERS',
+    desc: 'A file in the repo that maps file paths to team owners. When a PR touches /app/payments/, the payments team is auto-added as required reviewers.',
+    why: 'Ensures domain experts always review changes in their area. Prevents a frontend dev from accidentally approving a critical infra change.',
+    tools: ['GitHub CODEOWNERS', 'GitLab code owners']
+  },
+  'lint': {
+    title: 'Lint & format check',
+    desc: 'Lint catches code quality issues: unused imports, shadowed variables, dangerous patterns. Format check ensures the codebase looks consistent — spacing, quote style, line length.',
+    why: 'Consistent code is easier to read and review. Lint catches real bugs before tests even run — fastest feedback loop.',
+    tools: ['Ruff (Python)', 'ESLint (JS)', 'Prettier', 'golangci-lint']
+  },
+  'typecheck': {
+    title: 'Static type checking',
+    desc: 'Analyses code for type mismatches without running it. Catches cases like passing a string where an integer is expected, or calling a method that doesn\'t exist on a type.',
+    why: 'Type errors at compile/check time are orders of magnitude cheaper to fix than at runtime in production.',
+    tools: ['MyPy (Python)', 'TypeScript', 'Pyright']
+  },
+  'sast': {
+    title: 'SAST — Static Application Security Testing',
+    desc: 'Scans source code for security vulnerabilities without running it. Finds hardcoded secrets, SQL injection risks, insecure cryptography, shell injection, and dangerous function calls.',
+    why: 'Security issues are 10x cheaper to fix in development than in production. Healthcare companies face heavy fines for PHI breaches — SAST is a required control.',
+    tools: ['Bandit (Python)', 'SonarQube', 'Semgrep', 'CodeQL']
+  },
+  'secret-scan': {
+    title: 'Secret scanning',
+    desc: 'Scans every commit for accidentally committed secrets — API keys, passwords, tokens, private keys. Runs on the full git history, not just new code.',
+    why: 'A leaked AWS key can cost thousands in minutes. A leaked patient database credential is a HIPAA breach. This is non-negotiable.',
+    tools: ['Gitleaks', 'Trufflehog', 'GitHub secret scanning', 'GitGuardian']
+  },
+  'sca': {
+    title: 'SCA — Software Composition Analysis',
+    desc: 'Scans your dependencies (pip packages, npm modules) for known vulnerabilities. Checks against CVE databases and license compliance.',
+    why: 'Most modern code is 80% open-source dependencies. Log4Shell, the 2021 catastrophic vulnerability, affected thousands of enterprises because they didn\'t know Log4j was in their stack.',
+    tools: ['Snyk', 'Dependabot', 'OWASP Dependency-Check', 'WhiteSource']
+  },
+  'unit-tests': {
+    title: 'Unit tests',
+    desc: 'Tests that verify individual functions or classes in isolation. Fast — should run in under 2 minutes. Mock all external dependencies (databases, APIs).',
+    why: 'Unit tests are the cheapest form of correctness verification. They run on every commit and give developers immediate feedback.',
+    tools: ['Pytest', 'Jest', 'JUnit', 'Go test']
+  },
+  'integration-tests': {
+    title: 'Integration tests',
+    desc: 'Tests that verify multiple components working together — your code plus a real database, real cache, real message queue. Slower than unit tests.',
+    why: 'Unit tests can pass while integration breaks. The database schema mismatch, the network timeout, the auth middleware bug — these only show up in integration.',
+    tools: ['Pytest with testcontainers', 'Postman/Newman', 'REST Assured']
+  },
+  'coverage-gate': {
+    title: 'Code coverage gate',
+    desc: 'Measures what percentage of your code is executed during tests. If coverage drops below the threshold (e.g. 80%), the build fails. Reported to Codecov or SonarQube.',
+    why: 'Ensures developers write tests alongside code, not as an afterthought. Low coverage means large blind spots — code that could break without any test catching it.',
+    tools: ['Codecov', 'Coveralls', 'SonarQube', 'Istanbul/NYC']
+  },
+  'docker-build': {
+    title: 'Docker image build',
+    desc: 'Builds a container image from your Dockerfile. Tags it with the commit SHA and PR number for traceability. Uses layer caching to keep builds fast.',
+    why: 'The image is the deployable artifact. Building it in CI ensures it always builds from clean code, never from a developer\'s local environment with unknown state.',
+    tools: ['Docker', 'Buildah', 'Kaniko', 'BuildKit']
+  },
+  'registry': {
+    title: 'Container registry push',
+    desc: 'Pushes the built Docker image to a central registry. Tagged with version, commit SHA, and environment target. The registry is the single source of truth for deployable images.',
+    why: 'Teams need a central place to store, version, and pull images. The registry also enforces access controls — not everyone can push to production tags.',
+    tools: ['AWS ECR', 'JFrog Artifactory', 'Google Container Registry', 'Harbor']
+  },
+  'image-scan': {
+    title: 'Container image scanning',
+    desc: 'Scans the built Docker image for known CVEs in OS packages and language libraries. Checks base image, all installed packages, and application dependencies.',
+    why: 'Your app code might be clean but your base image (Ubuntu, Alpine) has unpatched vulnerabilities. Trivy found the Log4Shell vulnerability in container images automatically.',
+    tools: ['Trivy', 'Grype', 'Snyk Container', 'AWS ECR scanning']
+  },
+  'image-sign': {
+    title: 'Image signing',
+    desc: 'Cryptographically signs the container image after it passes all security checks. The signature proves the image hasn\'t been tampered with between CI and deployment.',
+    why: 'Supply chain attacks (like SolarWinds) inject malicious code between build and deploy. Signing + signature verification in Kubernetes prevents unsigned images from running.',
+    tools: ['Cosign (Sigstore)', 'Notary v2', 'Docker Content Trust']
+  },
+  'sbom': {
+    title: 'SBOM — Software Bill of Materials',
+    desc: 'A complete inventory of every component inside your software — OS packages, language libraries, transitive dependencies, versions, licenses. Stored alongside the image.',
+    why: 'When a new CVE is published (e.g. OpenSSL vulnerability), you need to know instantly which apps are affected. SBOM lets you query "which services use OpenSSL < 3.0.8?"',
+    tools: ['Syft', 'SPDX', 'CycloneDX', 'AWS Inspector']
+  },
+  'gitops': {
+    title: 'GitOps deployment',
+    desc: 'All deployment config lives in Git. The CD tool watches the Git repo and makes the actual cluster match what\'s in Git. To deploy, you commit a config change — not run a script.',
+    why: 'Deployments become auditable, reproducible, and reversible. Roll back = revert a Git commit. No one runs kubectl manually in production.',
+    tools: ['ArgoCD', 'Flux', 'Helm', 'Kustomize']
+  },
+  'dev-env': {
+    title: 'Dev environment',
+    desc: 'A Kubernetes namespace dedicated to developer testing. Loose policies, frequent deploys, real-but-anonymized data. Developers can test interactively before staging.',
+    why: 'Isolates unstable work-in-progress from staging and production. Developers need a safe sandbox that won\'t affect others.',
+    tools: ['Kubernetes namespaces', 'Helm', 'Skaffold', 'Telepresence']
+  },
+  'staging-env': {
+    title: 'Staging environment',
+    desc: 'Near-exact mirror of production. Same infrastructure specs, same config, same anonymized data shapes. Used for final validation before production deployment.',
+    why: 'If it works in staging, it works in prod. In healthcare, staging uses de-identified patient data — never real PHI, but structurally identical.',
+    tools: ['Kubernetes', 'Terraform (same infra as prod)', 'AWS/GCP/Azure']
+  },
+  'dast': {
+    title: 'DAST — Dynamic Application Security Testing',
+    desc: 'Actively attacks your running application in staging — exactly like a hacker would. Tests for XSS, SQL injection, broken auth, CSRF, IDOR, and OWASP Top 10 vulnerabilities.',
+    why: 'SAST reads code, DAST attacks the live app. Some vulnerabilities only appear at runtime — DAST catches what SAST misses.',
+    tools: ['OWASP ZAP', 'Burp Suite Enterprise', 'Nuclei', 'k6 for load']
+  },
+  'e2e': {
+    title: 'End-to-end tests',
+    desc: 'Browser-level tests that simulate a real user clicking through the application. Tests full workflows — login → search → book appointment → confirm — against the staging environment.',
+    why: 'Unit and integration tests verify code. E2E tests verify the actual user experience works from start to finish.',
+    tools: ['Playwright', 'Cypress', 'Selenium', 'Puppeteer']
+  },
+  'perf-test': {
+    title: 'Performance testing',
+    desc: 'Simulates high load against staging to find bottlenecks before production. Measures response time at 100, 500, 1000 concurrent users. Sets baseline for SLAs.',
+    why: 'A feature that works for 1 user may fail for 1000. Healthcare appointment systems get surge traffic — performance tests catch this before patients are affected.',
+    tools: ['k6', 'Locust', 'Gatling', 'Apache JMeter']
+  },
+  'compliance-gate': {
+    title: 'Compliance gate',
+    desc: 'Automated checks that verify regulatory requirements are met before production deployment. Checks include: PHI encryption verified, access logs enabled, retention policies set, vulnerability SLAs met.',
+    why: 'HIPAA requires specific technical controls to be present. This gate generates automated evidence for auditors — no manual checklists.',
+    tools: ['Open Policy Agent (OPA)', 'Chef InSpec', 'AWS Config', 'HashiCorp Sentinel']
+  },
+  'cab': {
+    title: 'CAB — Change Advisory Board',
+    desc: 'A formal change request process. Every production deployment creates a ticket documenting: what changed, why, risk assessment, rollback plan, and who approved it.',
+    why: 'Required by ITIL, SOC2, and HIPAA change management controls. The CAB ticket is the audit trail that proves every change was reviewed.',
+    tools: ['ServiceNow', 'Jira Service Management', 'PagerDuty Change Events']
+  },
+  'manager-approval': {
+    title: 'Manager / release approval',
+    desc: 'A named individual (tech lead, manager, or release manager) must explicitly approve the deployment in the pipeline tool before it can proceed to production.',
+    why: 'The human gate prevents automated pipelines from deploying during freeze periods, critical events, or when risk is elevated.',
+    tools: ['GitHub Environments (required reviewers)', 'ArgoCD sync approval', 'Jenkins input step']
+  },
+  'deploy-window': {
+    title: 'Deployment window',
+    desc: 'Production deployments are only allowed during pre-approved time windows — typically off-peak hours like Tuesday 2–4am. Deployments outside the window are blocked by the pipeline.',
+    why: 'Limits blast radius. A broken deploy at 2am when traffic is 5% of peak is much easier to handle than one at noon.',
+    tools: ['GitHub Actions schedule gate', 'PagerDuty schedules', 'ServiceNow maintenance windows']
+  },
+  'audit-log': {
+    title: 'Immutable audit log',
+    desc: 'Every pipeline action is written to an append-only audit log: who triggered the deploy, what image was deployed, which approvals were given, what time, from which IP. Cannot be deleted or modified.',
+    why: 'HIPAA requires an audit trail of all system changes. SOC2 Type II auditors will specifically ask for deployment logs. Without this, you fail the audit.',
+    tools: ['AWS CloudTrail', 'GitHub audit log', 'Splunk', 'Datadog audit']
+  },
+  'blue-green': {
+    title: 'Blue/green deployment',
+    desc: 'Run two identical production environments — blue (current) and green (new version). Deploy to green, run smoke tests, then flip the load balancer to green in milliseconds. Blue stays alive for 30 min as instant rollback target.',
+    why: 'Zero downtime and near-instant rollback. In healthcare, patient-facing systems cannot have scheduled maintenance windows.',
+    tools: ['AWS ALB target group switch', 'Kubernetes service selector', 'Nginx upstream swap']
+  },
+  'canary': {
+    title: 'Canary deployment',
+    desc: 'Route a small percentage of traffic (5%, 10%) to the new version first. Watch error rates and latency for 15–30 minutes. If healthy, gradually increase to 100%. If not, route back to 0% instantly.',
+    why: 'Real production traffic is the ultimate test. Canary limits the blast radius — 5% of users see a bad deploy, not 100%.',
+    tools: ['Argo Rollouts', 'Flagger', 'AWS CodeDeploy canary', 'Istio traffic splitting']
+  },
+  'rolling-update': {
+    title: 'Rolling update',
+    desc: 'Kubernetes replaces pods one at a time. New pod starts → health check passes → old pod terminated → next pod. Configurable: max 1 unavailable, max 1 surge.',
+    why: 'The default Kubernetes update strategy. Simple, built-in, zero downtime for most workloads.',
+    tools: ['Kubernetes Deployment rollout', 'Helm upgrade', 'ArgoCD sync']
+  },
+  'rollback': {
+    title: 'Automated rollback',
+    desc: 'Monitors error rate and latency in the 15 minutes after deploy. If error rate spikes above threshold (e.g. 2x baseline) or p99 latency exceeds SLA, automatically rolls back to the previous version without human intervention.',
+    why: 'At 3am nobody is watching. Automated rollback is the safety net that catches bad deploys before they cause major incidents.',
+    tools: ['Argo Rollouts analysis', 'Flagger', 'Spinnaker automated canary analysis']
+  },
+  'metrics': {
+    title: 'Metrics — Prometheus + Grafana',
+    desc: 'Every service exposes metrics (request rate, error rate, latency, resource usage). Prometheus scrapes and stores them. Grafana visualizes dashboards. Alerts fire when metrics cross thresholds.',
+    why: 'You cannot manage what you cannot measure. Metrics are the primary signal for whether a deploy was successful.',
+    tools: ['Prometheus', 'Grafana', 'Datadog', 'New Relic', 'AWS CloudWatch']
+  },
+  'logs': {
+    title: 'Log aggregation',
+    desc: 'All application and infrastructure logs are shipped to a central store in real time. Indexed and searchable. Retained for compliance periods (HIPAA requires 6 years).',
+    why: 'When an incident happens, logs are how you reconstruct what happened. In healthcare, logs are also required audit evidence.',
+    tools: ['Loki + Grafana', 'ELK Stack', 'Splunk', 'Datadog Logs', 'AWS CloudWatch Logs']
+  },
+  'tracing': {
+    title: 'Distributed tracing',
+    desc: 'Assigns a unique trace ID to every request. As the request flows through microservices, each service records its span. You can see the full call chain and exactly where latency was introduced.',
+    why: 'In a microservices architecture, a slow request might touch 8 services. Without tracing you cannot tell which one is slow.',
+    tools: ['Jaeger', 'Zipkin', 'Datadog APM', 'AWS X-Ray', 'OpenTelemetry']
+  },
+  'snogo': {
+    title: 'Alert → ticket (Snogo)',
+    desc: 'This is exactly what HealthPartners\' open-source Snogo tool does. Prometheus fires an alert → Alertmanager sends a webhook → Snogo receives it → creates a ServiceNow incident automatically. No human needs to manually create the ticket.',
+    why: 'In an enterprise handling healthcare data, every incident must be tracked in the ITSM system. Manual ticket creation is slow and error-prone at 3am.',
+    tools: ['Snogo (HealthPartners)', 'PagerDuty', 'OpsGenie', 'ServiceNow', 'VictorOps']
+  }
+};
+
+function showDetail(key) {
+  const d = details[key];
+  if (!d) return;
+  document.getElementById('detail-title').textContent = d.title;
+  document.getElementById('detail-desc').textContent = d.desc;
+  document.getElementById('detail-why').textContent = '→ Why it matters: ' + d.why;
+  const toolsEl = document.getElementById('detail-tools');
+  toolsEl.innerHTML = d.tools.map(t => `<span class="tool-tag">${t}</span>`).join('');
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDetail();
+});
+</script>
+</body>
+</html>

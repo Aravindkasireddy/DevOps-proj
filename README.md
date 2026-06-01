@@ -9,15 +9,15 @@ Production-style reference project for **Financial Enterprise Application**: a p
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────────────────────────┐
 │  Developers │────▶│ GitHub (SCM) │────▶│ GitHub Actions (CI/CD)              │
-└─────────────┘     └──────────────┘     │ lint · test · SAST · build · scan   │
+└─────────────┘     └──────────────┘     │ lint · test · SAST · Sonar (opt.) · build · Trivy │
                                          └──────────┬──────────────────────────┘
                                                     │
                     ┌───────────────────────────────┴───────────────────────────────┐
                     ▼                                                               ▼
             ┌───────────────┐                                              ┌─────────────────┐
-            │ GHCR          │                                              │ Checkov (IaC)   │
-            │ Trivy · opt.  │                                              │ Terraform scan  │
-            │ Docker Hub    │                                              │                 │
+            │ GHCR (primary)│                                              │ Checkov (IaC)   │
+            │ Trivy · Sonar │                                              │ Terraform scan  │
+            │ Docker Hub opt│                                              │                 │
             └───────┬───────┘                                              └────────┬────────┘
                     │                                                               │
                     └───────────────────────────────┬───────────────────────────────┘
@@ -55,7 +55,7 @@ open http://localhost:3000         # Grafana
 
 **Kind + Argo CD** (Kubernetes + GitOps — interview gold):
 
-On **`main`**, [CI/CD](.github/workflows/ci-cd.yml) also runs **Deploy to Kind (CI)** on GitHub-hosted runners (same `k8s/overlays/local` as below). EKS staging is opt-in via repo variable `EKS_STAGING_ENABLED` — see [docs/END_TO_END_GITHUB.md](docs/END_TO_END_GITHUB.md).
+On **`main`**, [CI/CD](.github/workflows/ci-cd.yml) runs **Python CI**, optional **SonarQube** (`sonarqube-gate` → same scan as `sonarqube.yml`), then **build / Trivy / GHCR** and **Deploy to Kind (CI)** on GitHub-hosted runners (same `k8s/overlays/local` as below). When Sonar is configured, a failed quality gate **does not** run Kind or EKS deploy jobs. EKS staging is opt-in via repo variable `EKS_STAGING_ENABLED` — see [docs/END_TO_END_GITHUB.md](docs/END_TO_END_GITHUB.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```bash
 export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
@@ -81,7 +81,8 @@ See **[docs/KIND_ARGOCD.md](docs/KIND_ARGOCD.md)** for the full walkthrough.
 | `argocd/` | Argo CD AppProject & Applications (GitOps) |
 | `ansible/` | VM deployment playbook |
 | `observability/` | Prometheus, Grafana, alerts |
-| `docs/` | Architecture, runbook, **interview prep** |
+| `docs/` | Architecture, runbook, interview prep, **SonarQube** |
+| `sonar-project.properties` | SonarScanner defaults (with CI `-D` overrides) |
 
 ## DevOps toolchain map
 
@@ -90,7 +91,7 @@ See **[docs/KIND_ARGOCD.md](docs/KIND_ARGOCD.md)** for the full walkthrough.
 | **Ruff / MyPy** | `app/`, CI | Linting, static typing |
 | **pytest + coverage** | `app/tests/` | Unit testing, quality gates |
 | **Bandit** | CI | Python SAST |
-| **SonarQube Cloud** | `sonarqube.yml` (optional) | Centralized quality + coverage; needs `SONAR_*` setup |
+| **SonarQube Cloud** | `sonarqube.yml`, `reusable-sonarqube-scan.yml`, `ci-cd.yml` (`sonarqube-gate`) | Optional centralized quality + coverage; on `main`, gate **blocks** Kind / EKS deploy when enabled; [setup](docs/SONARQUBE.md) |
 | **Trivy** | CI | Container image scanning |
 | **Checkov** | CI + `terraform/` | IaC security (CIS, misconfig) |
 | **GitHub Actions** | `.github/workflows/` | SCM hooks, pipelines, environments |
@@ -123,10 +124,12 @@ Configure via Terraform workspaces — see `docs/ARCHITECTURE.md`.
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
+- [Architecture](docs/ARCHITECTURE.md) — includes **SonarQube** in CI/CD and security sections
+- [Enterprise CI/CD pipeline (7 stages)](docs/enterprise-ci-cd-pipeline/README.md) — reference diagram + narrative (commit → production)
 - [Runbook](docs/RUNBOOK.md)
 - [Interview prep (mapped to this repo)](docs/INTERVIEW_PREP.md)
-- [**EKS demo script (1 hour)**](docs/EKS_DEMO_SCRIPT.md) — presentation speaker notes
+- [**1-hour demo script + talking points**](docs/DEMO_1HR_SCRIPT.md) — printable spine (CI/CD, Terraform, K8s, close)
+- [**EKS demo script (1 hour)**](docs/EKS_DEMO_SCRIPT.md) — deeper minute-by-minute speaker notes
 - [**EKS demo checklist**](docs/EKS_DEMO_CHECKLIST.md) — prep before presenting
 - [Kind + Argo CD lab](docs/KIND_ARGOCD.md)
 - [**Reusable GitHub Actions**](docs/CICD_REUSABLE.md) — `workflow_call` Python + Docker workflows

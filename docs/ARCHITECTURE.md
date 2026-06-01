@@ -53,10 +53,16 @@ Alternatives considered: e-commerce (less relevant for institutional finance), g
 |-------|------|------|
 | Commit | pre-commit | Local fast feedback |
 | PR | GitHub Actions `ci.yml` | Lint, MyPy, Bandit, pytest ≥70% cov |
-| Merge main | `ci-cd.yml` | Build, Trivy (no Critical), push registries |
-| IaC | Checkov + `terraform plan` | No HIGH misconfigs |
-| Deploy staging | kubectl + Kustomize | Rollout health |
+| PR / develop | `sonarqube.yml` → [`reusable-sonarqube-scan.yml`](../.github/workflows/reusable-sonarqube-scan.yml) | Optional **SonarQube Cloud**: coverage XML + scanner; skips until `SONAR_TOKEN` + repo variables are set ([SONARQUBE.md](SONARQUBE.md)) |
+| Merge `main` | `ci-cd.yml` | **Sonar deploy gate** (same reusable scan) → Docker build → **Trivy** → push **GHCR** → **`deploy-kind`**; optional Terraform (**Checkov** + validate) when `TERRAFORM_CI_ENABLED=true`; optional **EKS** when `EKS_STAGING_ENABLED=true` |
+| IaC | Checkov + `terraform plan` / validate in CI | No HIGH misconfigs (when Terraform CI enabled) |
+| Deploy staging | kubectl + Kustomize (or GitOps) | Rollout health |
 | Deploy prod DR | Manual `workflow_dispatch` | Environment protection rules |
+
+### Code quality — SonarQube Cloud
+
+- **Where:** [`sonarqube.yml`](../.github/workflows/sonarqube.yml) runs on **PRs** and **`develop`** pushes (plus `workflow_dispatch`). **[`ci-cd.yml`](../.github/workflows/ci-cd.yml)** calls the same logic via **`sonarqube-gate`** before **`deploy-kind`** and **`deploy-staging`**, so a failed analysis or **quality gate** does not deploy to Kubernetes when Sonar is configured.
+- **Setup:** Repository secret `SONAR_TOKEN` and variables `SONAR_ORGANIZATION`, `SONAR_PROJECT_KEY`; disable SonarCloud **Automatic Analysis** if using CI ([SONARQUBE.md](SONARQUBE.md)).
 
 ## Registry strategy
 
@@ -85,7 +91,7 @@ Alternatives considered: e-commerce (less relevant for institutional finance), g
 
 ## Security controls
 
-- **SAST**: Bandit on application code
+- **SAST (application)**: Bandit in CI; optional **SonarQube Cloud** for broader rules, coverage, duplications, and **quality gate** (blocks image deploy paths on `main` when enabled)
 - **Container**: Trivy in CD pipeline
 - **IaC**: Checkov on Terraform (encryption, public access, logging)
 - **Runtime**: K8s non-root, resource limits, NetworkPolicies (extend in prod)

@@ -1,0 +1,17 @@
+%% Enterprise CI/CD — paste into https://mermaid.live → Export SVG/PNG at high resolution
+flowchart TB
+  S1["Stage 1 — Source control<br/>Feature branch · Pull request · Branch protection · CODEOWNERS<br/>(First gate: human review)"]
+
+  S2["Stage 2 — Continuous integration<br/>Parallel hard gates: Lint · Type check · SAST · Secret scan · Unit tests<br/>Integration tests · Coverage gate e.g. ≥80% · Docker build<br/>(No warn-and-continue in enterprise)"]
+
+  S3["Stage 3 — Artifact and container security<br/>Push to private registry · Image scan Trivy / Snyk / Grype<br/>Sign image Cosign · Notary · SBOM supply chain inventory<br/>(Audit evidence for HIPAA / SOC2-style reviews)"]
+
+  S4["Stage 4 — Dev and staging<br/>Ad-hoc deploy · Mirror · Staging · Dynamic DAST on running app<br/>E2E Playwright/Cypress · Load test · Compliance scans HIPAA/SOC2/PCI<br/>(Staging mirrors prod shape; anonymized data in healthcare)"]
+
+  S5["Stage 5 — Approval gate<br/>CAB / Change request · Manager approval · Deployment window<br/>Immutable audit log e.g. ServiceNow<br/>(Human gate before production)"]
+
+  S6["Stage 6 — Production deployment<br/>Blue/green · Canary 5% then ramp · Rolling pod updates<br/>Auto-rollback on error-rate spike<br/>(No single big-bang cutover)"]
+
+  S7["Stage 7 — Observability<br/>Metrics Prometheus + Grafana · Logs Loki/Splunk/ELK · Traces Jaeger/Datadog<br/>Alerts Alertmanager to Slack/PagerDuty to ServiceNow<br/>(Incident drives new commit — loop restarts)"]
+
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
