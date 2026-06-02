@@ -47,7 +47,7 @@ kind-down: ## Delete Kind cluster
 argocd-install: ## Install Argo CD on current cluster
 	./scripts/argocd-install.sh
 
-argocd-bootstrap: ## Apply AppProject + Applications (set ARGOCD_REPO_URL)
+argocd-bootstrap: ## Apply AppProject + Applications (set GITOPS_REPO_URL or ARGOCD_REPO_URL)
 	./scripts/argocd-bootstrap.sh
 
 argocd-up: argocd-install argocd-bootstrap ## Install Argo CD and bootstrap GitOps apps

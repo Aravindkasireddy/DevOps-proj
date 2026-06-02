@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLUSTER_NAME="${KIND_CLUSTER_NAME:-fin-enterprise}"
 
-REPO_URL="${ARGOCD_REPO_URL:-}"
+REPO_URL="${GITOPS_REPO_URL:-${ARGOCD_REPO_URL:-}}"
 if [[ -z "$REPO_URL" ]]; then
   if git -C "$ROOT" remote get-url origin &>/dev/null; then
     REPO_URL=$(git -C "$ROOT" remote get-url origin)
@@ -16,14 +16,16 @@ if [[ -z "$REPO_URL" ]]; then
 fi
 
 if [[ -z "$REPO_URL" ]] || [[ "$REPO_URL" == *"YOUR_"* ]]; then
-  echo "Set your Git remote URL:"
-  echo "  export ARGOCD_REPO_URL=https://github.com/<you>/financial-enterprise-devops-platform.git"
+  echo "Set the GitOps (configuration) repository URL — the repo Argo CD should watch:"
+  echo "  export GITOPS_REPO_URL=https://github.com/<org>/fin-enterprise-gitops.git"
+  echo "Or legacy:"
+  echo "  export ARGOCD_REPO_URL=https://github.com/<org>/fin-enterprise-gitops.git"
   exit 1
 fi
 
 kubectl config use-context "kind-${CLUSTER_NAME}" 2>/dev/null || true
 
-echo "Using repo: $REPO_URL"
+echo "Using GitOps repo: $REPO_URL"
 
 kubectl apply -f "$ROOT/argocd/projects/fin-enterprise-project.yaml"
 

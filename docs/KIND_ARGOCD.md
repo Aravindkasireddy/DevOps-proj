@@ -26,8 +26,10 @@ Run the full **Kubernetes + GitOps** path on your laptop before touching AWS EKS
 ## Option A — Full GitOps (recommended for interviews)
 
 ```bash
-# 1. Push this repo to GitHub first (same URL as your origin)
-export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
+# 1. Repo Argo CD watches — GitOps-only (recommended split) or monorepo:
+#    https://github.com/Aravindkasireddy/fin-enterprise-gitops
+export GITOPS_REPO_URL=https://github.com/Aravindkasireddy/fin-enterprise-gitops.git
+#    Monorepo (app + k8s together): export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
 
 # 2. Create cluster + load image
 make kind-up

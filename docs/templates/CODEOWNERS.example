@@ -1,0 +1,11 @@
+# Copy to repository root as CODEOWNERS (no extension).
+# Replace @your-org/team-slugs with real GitHub teams or @usernames.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @your-org/default-reviewers
+
+/.github/workflows/ @your-org/platform-security
+/k8s/ @your-org/platform
+/terraform/ @your-org/platform
+/argocd/ @your-org/platform
+/ansible/ @your-org/platform

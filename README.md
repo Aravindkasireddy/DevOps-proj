@@ -59,6 +59,9 @@ On **`main`**, [CI/CD](.github/workflows/ci-cd.yml) runs **Python CI**, optional
 
 ```bash
 export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
+# GitOps-only repo (Argo watches manifests here): https://github.com/Aravindkasireddy/fin-enterprise-gitops
+# export GITOPS_REPO_URL=https://github.com/Aravindkasireddy/fin-enterprise-gitops.git
+# See docs/GITOPS_APP_CONFIG_SPLIT.md
 make kind-up          # cluster + load image
 make argocd-up        # Argo CD + sync from git
 # OR before git push:  make kind-apply
@@ -125,6 +128,7 @@ Configure via Terraform workspaces — see `docs/ARCHITECTURE.md`.
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — includes **SonarQube** in CI/CD and security sections
+- [**GitOps split: app repo vs config repo**](docs/GITOPS_APP_CONFIG_SPLIT.md) — Argo watches config only; drift; export script
 - [Enterprise CI/CD pipeline (7 stages)](docs/enterprise-ci-cd-pipeline/README.md) — reference diagram + narrative (commit → production)
 - [Runbook](docs/RUNBOOK.md)
 - [Interview prep (mapped to this repo)](docs/INTERVIEW_PREP.md)
