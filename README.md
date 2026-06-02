@@ -131,6 +131,7 @@ Configure via Terraform workspaces — see `docs/ARCHITECTURE.md`.
 - [**GitOps split: app repo vs config repo**](docs/GITOPS_APP_CONFIG_SPLIT.md) — Argo watches config only; drift; export script
 - [Enterprise CI/CD pipeline (7 stages)](docs/enterprise-ci-cd-pipeline/README.md) — reference diagram + narrative (commit → production)
 - [Runbook](docs/RUNBOOK.md)
+- [**SOP: Choosing a branching strategy**](docs/SOP_BRANCHING_STRATEGY.md) — Feature branching, GitHub/GitLab Flow, Gitflow, trunk-based; decision path + Mermaid diagrams; [interactive picker](docs/branching-strategy-tool/index.html) (open in browser)
 - [Interview prep (mapped to this repo)](docs/INTERVIEW_PREP.md)
 - [**1-hour demo script + talking points**](docs/DEMO_1HR_SCRIPT.md) — printable spine (CI/CD, Terraform, K8s, close)
 - [**EKS demo script (1 hour)**](docs/EKS_DEMO_SCRIPT.md) — deeper minute-by-minute speaker notes

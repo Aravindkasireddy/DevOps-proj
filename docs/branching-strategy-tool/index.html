@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Branching strategy picker — SOP helper</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e6edf3;
+      --muted: #8b9cb3;
+      --accent: #3d8bfd;
+      --ok: #3fb950;
+      --warn: #d29922;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 1.5rem; }
+    h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 0.25rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .card {
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid #30363d;
+    }
+    .q { font-weight: 600; margin-bottom: 0.75rem; }
+    .opts { display: flex; flex-direction: column; gap: 0.5rem; }
+    label {
+      display: flex; align-items: flex-start; gap: 0.6rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    label:hover { background: rgba(61, 139, 253, 0.08); border-color: #30363d; }
+    input[type="radio"] { margin-top: 0.2rem; accent-color: var(--accent); }
+    .actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap; }
+    button {
+      font: inherit;
+      padding: 0.55rem 1.1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+    }
+    button.secondary { background: #30363d; color: var(--text); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .result {
+      border-left: 4px solid var(--ok);
+      padding-left: 1rem;
+      margin-top: 0.5rem;
+    }
+    .result h2 { font-size: 1.1rem; margin: 0 0 0.5rem; }
+    .pill {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: #21262d;
+      color: var(--muted);
+      margin-right: 0.35rem;
+    }
+    a { color: var(--accent); }
+    footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+    .progress { font-size: 0.8rem; color: var(--muted); margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Branching strategy picker</h1>
+    <p class="sub">Interactive helper aligned with <a href="../SOP_BRANCHING_STRATEGY.md">SOP: branching strategy</a>. Not a substitute for team governance.</p>
+    <p class="progress" id="progress"></p>
+    <div class="card" id="step-card"></div>
+    <div class="actions">
+      <button type="button" id="btn-back" class="secondary" hidden>Back</button>
+      <button type="button" id="btn-next">Next</button>
+    </div>
+    <footer>
+      Open this file in a browser (<code>file://</code> or any static host). Pair with the written SOP for classification tables and anti-patterns.
+    </footer>
+  </div>
+  <script>
+(function () {
+  const questions = [
+    {
+      id: "cadence",
+      q: "How often do you ship or intend to ship to production?",
+      options: [
+        { value: "daily", label: "Multiple times per day or daily", scores: { trunk: 3, github: 2, gitlab: 1, gitflow: -2 } },
+        { value: "weekly", label: "Weekly or bi-weekly", scores: { trunk: 1, github: 3, gitlab: 2, gitflow: 0 } },
+        { value: "rare", label: "Monthly, quarterly, or versioned trains", scores: { trunk: -2, github: 0, gitlab: 2, gitflow: 3 } },
+      ],
+    },
+    {
+      id: "ci",
+      q: "How strong is CI (fast tests, reliable gates, trunk stays green)?",
+      options: [
+        { value: "strong", label: "Strong — PRs merge quickly; main rarely red", scores: { trunk: 3, github: 2, gitlab: 1, gitflow: -1 } },
+        { value: "medium", label: "Medium — occasional flakes or slow pipelines", scores: { trunk: 0, github: 2, gitlab: 2, gitflow: 1 } },
+        { value: "weak", label: "Weak / building — long red periods or sparse tests", scores: { trunk: -3, github: 0, gitlab: 1, gitflow: 2 } },
+      ],
+    },
+    {
+      id: "env",
+      q: "Do you need git-visible promotion across environments (e.g. staging → prod)?",
+      options: [
+        { value: "yes", label: "Yes — promotion should be obvious in branch/tag history", scores: { trunk: -1, github: -1, gitlab: 4, gitflow: 1 } },
+        { value: "no", label: "No — deploy from main (or tags) with pipeline/env config only", scores: { trunk: 2, github: 3, gitlab: 0, gitflow: 0 } },
+      ],
+    },
+    {
+      id: "release",
+      q: "Do you need formal release candidates and hotfix lanes (version freeze)?",
+      options: [
+        { value: "yes", label: "Yes — coordinated versions / audit-friendly windows", scores: { trunk: -2, github: -1, gitlab: 1, gitflow: 4 } },
+        { value: "no", label: "No — continuous delivery is the goal", scores: { trunk: 2, github: 3, gitlab: 1, gitflow: -2 } },
+      ],
+    },
+  ];
+
+  const strategies = {
+    trunk: {
+      name: "Trunk-based development",
+      blurb: "Keep main always releasable; very short branches or direct commits; feature flags; ruthless CI.",
+      when: "Mature teams shipping frequently with strong automation.",
+    },
+    github: {
+      name: "GitHub Flow",
+      blurb: "Short-lived branches; PR → merge to main → deploy. Minimal branch inventory.",
+      when: "SaaS and most web backends with continuous delivery.",
+    },
+    gitlab: {
+      name: "GitLab Flow (environment branches)",
+      blurb: "Mainline work plus explicit promotion branches (or patterns) for staging/production.",
+      when: "Multiple environments where git history should show promotion.",
+    },
+    gitflow: {
+      name: "Gitflow",
+      blurb: "develop integrates; release/* freezes; hotfix/* from main; merges back to both.",
+      when: "Versioned releases, mobile/libs, or strict release windows.",
+    },
+  };
+
+  let step = 0;
+  const answers = [];
+
+  const el = (id) => document.getElementById(id);
+  const progress = el("progress");
+  const card = el("step-card");
+  const btnNext = el("btn-next");
+  const btnBack = el("btn-back");
+
+  function totalSteps() {
+    return questions.length + 1;
+  }
+
+  function render() {
+    progress.textContent = "Step " + Math.min(step + 1, totalSteps()) + " of " + totalSteps();
+    btnBack.hidden = step === 0;
+    btnBack.disabled = step === 0;
+
+    if (step < questions.length) {
+      const q = questions[step];
+      let html = '<div class="q">' + escapeHtml(q.q) + '</div><div class="opts">';
+      q.options.forEach(function (opt, i) {
+        const id = "opt-" + step + "-" + i;
+        const checked = answers[step] === opt.value ? " checked" : "";
+        html += '<label><input type="radio" name="ans" value="' + escapeAttr(opt.value) + '"' + checked + ' id="' + id + '" />' + escapeHtml(opt.label) + "</label>";
+      });
+      html += "</div>";
+      card.innerHTML = html;
+      btnNext.textContent = "Next";
+      btnNext.disabled = false;
+      return;
+    }
+
+    const scores = { trunk: 0, github: 0, gitlab: 0, gitflow: 0 };
+    questions.forEach(function (q, qi) {
+      const sel = answers[qi];
+      const opt = q.options.find(function (o) { return o.value === sel; });
+      if (!opt) return;
+      Object.keys(scores).forEach(function (k) {
+        scores[k] += opt.scores[k] || 0;
+      });
+    });
+
+    let best = "github";
+    let bestScore = -999;
+    Object.keys(scores).forEach(function (k) {
+      if (scores[k] > bestScore) {
+        bestScore = scores[k];
+        best = k;
+      }
+    });
+
+    const order = Object.keys(scores).sort(function (a, b) { return scores[b] - scores[a]; });
+    let html = '<div class="result"><h2>Suggested starting point</h2><p><strong>' + escapeHtml(strategies[best].name) + "</strong></p><p>" + escapeHtml(strategies[best].blurb) + "</p><p><em>When it fits:</em> " + escapeHtml(strategies[best].when) + "</p>";
+    html += "<h3 style=\"font-size:0.95rem;margin:1rem 0 0.35rem\">Score ranking (heuristic)</h3><ul style=\"margin:0;padding-left:1.2rem;color:#8b9cb3;font-size:0.9rem\">";
+    order.forEach(function (k) {
+      html += "<li><span class=\"pill\">" + scores[k] + " pts</span> " + escapeHtml(strategies[k].name) + "</li>";
+    });
+    html += "</ul><p style=\"margin-top:1rem;font-size:0.9rem\">Feature branching is how you work on a branch, not a separate lifecycle—combine it with any row above.</p>";
+    html += '<p style="margin-top:0.75rem"><a href="../SOP_BRANCHING_STRATEGY.md">Open full SOP</a> for matrices, anti-patterns, and how this repo maps.</p></div>';
+    card.innerHTML = html;
+    btnNext.textContent = "Start over";
+    btnNext.disabled = false;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function escapeAttr(s) {
+    return escapeHtml(s).replace(/'/g, "&#39;");
+  }
+
+  btnNext.addEventListener("click", function () {
+    if (step < questions.length) {
+      const picked = card.querySelector('input[name="ans"]:checked');
+      if (!picked) return;
+      answers[step] = picked.value;
+      step += 1;
+      render();
+      return;
+    }
+    step = 0;
+    answers.length = 0;
+    render();
+  });
+
+  btnBack.addEventListener("click", function () {
+    if (step > 0) {
+      step -= 1;
+      render();
+    }
+  });
+
+  render();
+})();
+  </script>
+</body>
+</html>
