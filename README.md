@@ -58,9 +58,9 @@ open http://localhost:3000         # Grafana
 On **`main`**, [CI/CD](.github/workflows/ci-cd.yml) runs **Python CI**, optional **SonarQube** (`sonarqube-gate` → same scan as `sonarqube.yml`), then **build / Trivy / GHCR** and **Deploy to Kind (CI)** on GitHub-hosted runners (same `k8s/overlays/local` as below). When Sonar is configured, a failed quality gate **does not** run Kind or EKS deploy jobs. EKS staging is opt-in via repo variable `EKS_STAGING_ENABLED` — see [docs/END_TO_END_GITHUB.md](docs/END_TO_END_GITHUB.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```bash
-export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
-# GitOps-only repo (Argo watches manifests here): https://github.com/Aravindkasireddy/fin-enterprise-gitops
-# export GITOPS_REPO_URL=https://github.com/Aravindkasireddy/fin-enterprise-gitops.git
+# Repo Argo CD watches — use GitOps repo (recommended) or monorepo:
+export GITOPS_REPO_URL=https://github.com/Aravindkasireddy/fin-enterprise-gitops.git
+# Monorepo only (app + k8s in DevOps-proj): export ARGOCD_REPO_URL=https://github.com/Aravindkasireddy/DevOps-proj.git
 # See docs/GITOPS_APP_CONFIG_SPLIT.md
 make kind-up          # cluster + load image
 make argocd-up        # Argo CD + sync from git

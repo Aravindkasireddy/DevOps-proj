@@ -72,7 +72,7 @@ curl http://localhost:30080/docs
 | `make kind-apply` | `kubectl apply -k k8s/overlays/local` |
 | `make kind-down` | Delete cluster |
 | `make argocd-install` | Install Argo CD manifests |
-| `make argocd-bootstrap` | AppProject + App-of-Apps (needs `ARGOCD_REPO_URL`) |
+| `make argocd-bootstrap` | AppProject + Applications (`GITOPS_REPO_URL` or `ARGOCD_REPO_URL`) |
 | `make argocd-up` | `argocd-install` + `argocd-bootstrap` |
 
 ## What gets deployed (local overlay)
@@ -88,7 +88,7 @@ curl http://localhost:30080/docs
 
 1. **Why Kind?** — Same Kubernetes API as EKS/GKE; fast feedback; CI can run `kind create cluster` in GitHub Actions.
 2. **GitOps vs CI push** — Argo CD reconciles cluster to git; drift detection, rollback = revert commit.
-3. **App-of-Apps** — `argocd/bootstrap/root-app.yaml` is a reference pattern; bootstrap applies **leaf** `argocd/applications/*.yaml` with your repo URL substituted so Argo never syncs unresolved `REPO_URL_PLACEHOLDER` from git.
+3. **App-of-Apps** — `argocd/bootstrap/root-app.yaml` is a reference pattern; bootstrap applies **leaf** `argocd/applications/*.yaml`. Manifests in **fin-enterprise-gitops** commit a real `repoURL`; older clusters may still show **DevOps-proj** until you re-apply (see Troubleshooting).
 4. **ignoreDifferences** — Local image loaded via `kind load` isn’t in git; prevents sync loops.
 5. **Promotion** — `fin-enterprise-api-local` → `fin-enterprise-api-staging` → prod overlays; image tags move with overlays (e.g. GHCR digest or `kubectl set image` in CI).
 
@@ -98,7 +98,8 @@ curl http://localhost:30080/docs
 |-------|-----|
 | Argo UI / `https://localhost:30xxx` hangs | On Kind, use **port-forward** (see above); NodePort is not published to the host unless you add it to `kind/kind-config.yaml` `extraPortMappings`. |
 | `ImagePullBackOff` | `kind load docker-image financial-enterprise/asset-api:local --name fin-enterprise` |
-| Argo `ComparisonError` / repo | Set `ARGOCD_REPO_URL`; ensure repo is public or add credentials in Argo CD |
+| Argo UI shows **DevOps-proj** as repo URL | The **Application** on the cluster was bootstrapped with `ARGOCD_REPO_URL` pointing at the monorepo. Argo reads `spec.source.repoURL` from etcd, not from your laptop’s latest YAML until you update it. **Fix:** `export GITOPS_REPO_URL=https://github.com/Aravindkasireddy/fin-enterprise-gitops.git && make argocd-bootstrap` (re-applies templated apps), or patch: `kubectl patch application fin-enterprise-api-local -n argocd --type merge -p '{"spec":{"source":{"repoURL":"https://github.com/Aravindkasireddy/fin-enterprise-gitops.git"}}}'` then Refresh in UI. |
+| Argo `ComparisonError` / repo | Set `GITOPS_REPO_URL` (or `ARGOCD_REPO_URL`); ensure repo is public or add credentials in Argo CD |
 | `/ready` database down | Wait for postgres pod: `kubectl logs -n fin-enterprise-local deploy/postgres` |
 | OutOfSync on image | Expected — `ignoreDifferences` on Deployment image; or commit image tag for real envs |
 

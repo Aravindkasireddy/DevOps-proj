@@ -1,7 +1,5 @@
-# App-of-Apps — not applied by scripts/argocd-bootstrap.sh by default: child manifests in this
-# directory still use REPO_URL_PLACEHOLDER in git; Argo would sync invalid repo URLs. Bootstrap
-# substitutes the URL only for kubectl apply. Re-enable root after templating (Helm/Kustomize)
-# or committing resolved repo URLs.
+# App-of-Apps — points at the GitOps repo (same as leaf Applications). Bootstrap can still
+# substitute repoURL if you revert to REPO_URL_PLACEHOLDER for templating.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -12,7 +10,7 @@ metadata:
 spec:
   project: fin-enterprise
   source:
-    repoURL: REPO_URL_PLACEHOLDER
+    repoURL: https://github.com/Aravindkasireddy/fin-enterprise-gitops.git
     targetRevision: main
     path: argocd/applications
   destination:
