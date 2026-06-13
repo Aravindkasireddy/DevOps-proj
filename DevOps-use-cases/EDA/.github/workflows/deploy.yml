@@ -1,0 +1,50 @@
+name: EDA Claims Pipeline CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-and-lint:
+    name: Lint and Validate Code
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive terraform/
+
+      - name: Initialize Terraform
+        run: |
+          cd terraform
+          terraform init -backend=false
+
+      - name: Validate Terraform
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Lambda Functions
+        run: |
+          python -m py_compile lambda/claims_processor/index.py
+          python -m py_compile lambda/fraud_detector/index.py
+          python -m py_compile lambda/notification_sender/index.py
+          python -m py_compile lambda/analytics_ingester/index.py
+          echo "All Lambda functions compiled successfully."
