@@ -151,4 +151,4 @@ Configure via Terraform workspaces — see `docs/ARCHITECTURE.md`.
 
 ---
 
-Built as a **senior DevOps engineer portfolio project**: every folder answers real interview questions with runnable config, not slide-deck theory.
+Built as a **senior DevOps engineer portfolio project**: every folder answers real interview questions with runnable config, not slide-deck theory..
