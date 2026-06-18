@@ -1,0 +1,68 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: spring-boot-rds-template
+  title: Spring Boot Microservice with RDS
+  description: Scaffolds a Spring Boot application with a self-service AWS PostgreSQL database.
+spec:
+  owner: cloud-platform-team
+  type: service
+
+  parameters:
+    - title: Microservice Metadata
+      required:
+        - component_id
+        - owner
+      properties:
+        component_id:
+          title: Service Name
+          type: string
+          description: Unique name of the microservice (e.g. claims-payout-api)
+        owner:
+          title: Owner Team
+          type: string
+          description: USAA Team responsible for this service
+
+    - title: Database Parameters
+      required:
+        - db_size
+      properties:
+        db_size:
+          title: Database Instance Class
+          type: string
+          default: db.t3.medium
+          enum:
+            - db.t3.medium
+            - db.t3.large
+
+  steps:
+    - id: template
+      name: Scaffolding Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          componentId: ${{ parameters.component_id }}
+          owner: ${{ parameters.owner }}
+          dbSize: ${{ parameters.db_size }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: Scaffolder-generated repository for ${{ parameters.component_id }}
+        repoUrl: github.com?owner=usaa-claims&repo=${{ parameters.component_id }}
+
+    - id: register-servicenow
+      name: Log ServiceNow Change Request
+      action: http:request
+      input:
+        url: https://usaa.service-now.com/api/now/table/change_request
+        method: POST
+        headers:
+          Content-Type: application/json
+        body:
+          short_description: "Automated Provisioning: ${{ parameters.component_id }}"
+          description: "Developer portal self-service creation. Rep: github.com/usaa-claims/${{ parameters.component_id }}. DB size: ${{ parameters.db_size }}."
+          type: "standard"

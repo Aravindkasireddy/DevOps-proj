@@ -1,0 +1,20 @@
+apiVersion: database.aws.crossplane.io/v1beta1
+kind: RDSInstance
+metadata:
+  name: claims-payout-db
+  namespace: banking
+spec:
+  forProvider:
+    region: us-east-1
+    dbInstanceClass: db.t3.medium
+    engine: postgres
+    engineVersion: "15.4"
+    masterUsername: postgres
+    allocatedStorage: 20
+    dbSubnetGroupName: usaa-private-db-subnet-group
+    vpcSecurityGroupIds:
+      - sg-0123456789abcdef0
+    skipFinalSnapshot: true
+  writeConnectionSecretToRef:
+    namespace: banking
+    name: claims-payout-db-conn

@@ -1,0 +1,25 @@
+# Kyverno ClusterPolicy ensuring all EKS workloads run as non-root users
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-root-execution
+  annotations:
+    policies.kyverno.io/title: Restrict Root User Execution
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: High
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-run-as-non-root
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "USAA Security Policy Violation: Pods must configure runAsNonRoot to true."
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
